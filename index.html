@@ -1,0 +1,2716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MTTR AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0c0c0f;
+      --surface:   #111116;
+      --surface2:  #18181f;
+      --surface3:  #1e1e28;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.12);
+      --accent:    #d97706;
+      --accent2:   #f59e0b;
+      --accent-glow: rgba(217,119,6,0.15);
+      --text:      #f0f0f0;
+      --text2:     #a0a0b0;
+      --text3:     #606070;
+      --green:     #10b981;
+      --blue:      #3b82f6;
+      --danger:    #ef4444;
+      --purple:    #a78bfa;
+      --teal:      #2dd4bf;
+      --tsg:       #f472b6;
+      --tsg-bg:    rgba(244,114,182,0.08);
+      --tsg-border:rgba(244,114,182,0.28);
+      --radius:    14px;
+      --font:      'Geist', sans-serif;
+      --mono:      'Geist Mono', monospace;
+    }
+
+    [data-theme="light"] {
+      --bg:        #f5f5f0;
+      --surface:   #ffffff;
+      --surface2:  #f0efe8;
+      --surface3:  #e8e7df;
+      --border:    rgba(0,0,0,0.08);
+      --border2:   rgba(0,0,0,0.14);
+      --accent:    #d97706;
+      --accent2:   #b45309;
+      --accent-glow: rgba(217,119,6,0.12);
+      --text:      #111110;
+      --text2:     #5a5a50;
+      --text3:     #9a9a8e;
+      --green:     #059669;
+      --blue:      #2563eb;
+      --danger:    #dc2626;
+      --purple:    #7c3aed;
+      --teal:      #0d9488;
+      --tsg:       #db2777;
+      --tsg-bg:    rgba(219,39,119,0.06);
+      --tsg-border:rgba(219,39,119,0.25);
+    }
+
+    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; }
+    .app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(12,12,15,0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: relative; z-index: 10;
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; color: #000;
+      box-shadow: 0 0 20px var(--accent-glow);
+      flex-shrink: 0;
+    }
+    .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+    .logo-sub  { font-size: 11px; color: var(--text3); font-weight: 400; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 11.5px; color: var(--text2); font-family: var(--mono);
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; transition: background 0.3s; }
+    .status-dot.ok  { background: var(--green); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+    .status-dot.err { background: var(--danger); box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+
+    .tsg-chip {
+      display: none; align-items: center; gap: 6px;
+      background: var(--tsg-bg); border: 1px solid var(--tsg-border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 11.5px; color: var(--tsg); font-family: var(--mono);
+    }
+    .tsg-chip.active { display: flex; }
+    .tsg-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tsg); flex-shrink: 0; }
+
+    .model-chip {
+      display: none; align-items: center; gap: 6px;
+      background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.35);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11.5px; color: var(--teal); font-family: var(--mono);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .model-chip:hover { background: rgba(45,212,191,0.18); }
+    .model-chip.active { display: flex; }
+    .model-chip-x { font-size: 13px; opacity: 0.7; }
+
+    .new-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; color: var(--text2); cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .new-btn:hover { background: var(--surface3); border-color: var(--border2); color: var(--text); }
+
+    /* ── Conversation ── */
+    .convo-area { flex: 1; overflow-y: auto; padding: 0 0 16px; scroll-behavior: smooth; }
+    .convo-area::-webkit-scrollbar { width: 4px; }
+    .convo-area::-webkit-scrollbar-track { background: transparent; }
+    .convo-area::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+
+    /* ── Welcome ── */
+    .welcome {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: calc(100vh - 200px); padding: 40px 24px; text-align: center;
+    }
+    .welcome-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin-bottom: 24px;
+      box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(217,119,6,0.08);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    .welcome h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 10px; }
+    .welcome p  { font-size: 14px; color: var(--text2); line-height: 1.7; max-width: 480px; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 32px; max-width: 640px; }
+    .suggestion-pill {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 8px 16px;
+      font-size: 12.5px; color: var(--text2); cursor: pointer; transition: all 0.15s;
+    }
+    .suggestion-pill:hover { background: var(--surface3); border-color: var(--border2); color: var(--text); transform: translateY(-1px); }
+
+    /* ── Messages ── */
+    .messages {
+      max-width: 780px; margin: 0 auto; padding: 24px 24px 0;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .msg-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 24px; animation: msgIn 0.25s ease-out; }
+    @keyframes msgIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .msg-user { display: flex; justify-content: flex-end; }
+    .msg-user .bubble {
+      background: var(--surface3); border: 1px solid var(--border2);
+      border-radius: 18px 18px 4px 18px;
+      padding: 12px 16px; font-size: 14px; line-height: 1.65;
+      max-width: 75%; color: var(--text);
+    }
+    .msg-ai { display: flex; gap: 12px; align-items: flex-start; }
+    .ai-avatar {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #000;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .msg-ai .bubble { flex: 1; font-size: 14px; line-height: 1.75; color: var(--text); }
+
+    /* Intent badge */
+    .intent-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-family: var(--mono); font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      border-radius: 4px; padding: 3px 8px; margin-bottom: 8px; border: 1px solid;
+    }
+    .intent-badge.general     { color: var(--blue);   border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.07); }
+    .intent-badge.db_lookup   { color: var(--green);  border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.07); }
+    .intent-badge.troubleshoot{ color: var(--accent2);border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.07); }
+    .intent-badge.followup    { color: var(--text3);  border-color: var(--border); background: transparent; }
+    .intent-badge.diagram     { color: var(--purple); border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.07); }
+    .intent-badge.tsg_lookup  { color: var(--tsg);    border-color: var(--tsg-border); background: var(--tsg-bg); }
+    .intent-badge.analytics { color: #f97316; border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.07); }
+
+    .model-filter-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-family: var(--mono); font-weight: 600;
+      border-radius: 4px; padding: 3px 8px; margin-bottom: 8px; margin-left: 6px;
+      color: var(--teal); border: 1px solid rgba(45,212,191,0.35);
+      background: rgba(45,212,191,0.07);
+    }
+
+    /* ── ★ NEW: Filter Badges Row ── */
+    .filter-badges-row {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 10px; align-items: center;
+    }
+    .filter-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10.5px; font-family: var(--mono); font-weight: 500;
+      border-radius: 20px; padding: 3px 10px;
+      border: 1px solid; cursor: pointer; transition: all 0.15s;
+      user-select: none;
+    }
+    .filter-badge:hover { opacity: 0.8; transform: translateY(-1px); }
+    .filter-badge.f-worker   { color: var(--teal);   border-color: rgba(45,212,191,0.4);  background: rgba(45,212,191,0.08); }
+    .filter-badge.f-machine  { color: var(--accent2);border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
+    .filter-badge.f-year     { color: var(--blue);   border-color: rgba(59,130,246,0.4);  background: rgba(59,130,246,0.08); }
+    .filter-badge.f-shift    { color: var(--purple); border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.08); }
+    .filter-badge.f-model    { color: var(--teal);   border-color: rgba(45,212,191,0.4);  background: rgba(45,212,191,0.08); }
+    .filter-badge.f-spare    { color: #f97316;       border-color: rgba(249,115,22,0.4);  background: rgba(249,115,22,0.08); }
+    .filter-badge.f-date     { color: var(--green);  border-color: rgba(16,185,129,0.4);  background: rgba(16,185,129,0.08); }
+    .filter-badge.f-problem  { color: var(--danger); border-color: rgba(239,68,68,0.4);   background: rgba(239,68,68,0.08); }
+    .filter-badge-x { font-size: 11px; opacity: 0.6; margin-left: 2px; }
+    .filter-badge:hover .filter-badge-x { opacity: 1; }
+
+    /* ── ★ NEW: Execution path badge ── */
+    .exec-path-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 9.5px; font-family: var(--mono); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      border-radius: 4px; padding: 2px 7px; margin-left: 6px; margin-bottom: 8px;
+      border: 1px solid;
+    }
+    .exec-path-badge.sql_only    { color: var(--green);  border-color: rgba(16,185,129,0.35);  background: rgba(16,185,129,0.06); }
+    .exec-path-badge.semantic_only{ color: var(--blue);  border-color: rgba(59,130,246,0.35);  background: rgba(59,130,246,0.06); }
+    .exec-path-badge.hybrid      { color: var(--purple); border-color: rgba(167,139,250,0.35); background: rgba(167,139,250,0.06); }
+    .exec-path-badge.analytics   { color: #f97316;       border-color: rgba(249,115,22,0.35);  background: rgba(249,115,22,0.06); }
+    .exec-path-badge.tsg         { color: var(--tsg);    border-color: var(--tsg-border);       background: var(--tsg-bg); }
+
+    /* ── ★ NEW: Analytics result card ── */
+    .analytics-card {
+      margin: 6px 0 10px;
+      padding: 16px 18px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-left: 3px solid #f97316;
+      border-radius: 0 10px 10px 0;
+    }
+    .analytics-card-label {
+      font-size: 10px; font-family: var(--mono); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: #f97316; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+    }
+    .analytics-card-content {
+      font-size: 14px; color: var(--text); line-height: 1.75;
+    }
+    .analytics-card-content strong { color: var(--accent2); }
+    .analytics-stat-big {
+      font-size: 32px; font-weight: 700; color: var(--accent2);
+      letter-spacing: -0.03em; line-height: 1.1; margin: 4px 0 8px;
+    }
+    .analytics-table {
+      width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px;
+    }
+    .analytics-table th {
+      text-align: left; padding: 6px 10px;
+      font-size: 10px; font-family: var(--mono); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text3); border-bottom: 1px solid var(--border2);
+    }
+    .analytics-table td {
+      padding: 7px 10px; border-bottom: 1px solid var(--border);
+      color: var(--text2); vertical-align: top;
+    }
+    .analytics-table tr:last-child td { border-bottom: none; }
+    .analytics-table td:first-child { color: var(--text); font-weight: 500; }
+    .analytics-rank { color: var(--text3); font-family: var(--mono); font-size: 11px; }
+    .analytics-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .analytics-bar {
+      height: 6px; background: rgba(249,115,22,0.25);
+      border-radius: 3px; flex: 1; max-width: 120px;
+      position: relative; overflow: hidden;
+    }
+    .analytics-bar-fill {
+      position: absolute; top: 0; left: 0; bottom: 0;
+      background: #f97316; border-radius: 3px; transition: width 0.6s ease;
+    }
+
+    /* Structured sections */
+    .ai-section { margin-bottom: 16px; }
+    .ai-section:last-child { margin-bottom: 0; }
+    .ai-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent2); margin-bottom: 6px; font-family: var(--mono); }
+    .ai-cause { background: rgba(217,119,6,0.08); border: 1px solid rgba(217,119,6,0.2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 14px; color: var(--text); line-height: 1.6; }
+    .ai-steps { display: flex; flex-direction: column; gap: 8px; }
+    .ai-step  { display: flex; gap: 12px; align-items: flex-start; }
+    .step-num { width: 22px; height: 22px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: var(--mono); color: var(--text2); flex-shrink: 0; margin-top: 1px; }
+    .step-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+    .ai-bullets { display: flex; flex-direction: column; gap: 6px; }
+    .ai-bullet  { display: flex; gap: 8px; font-size: 14px; color: var(--text2); line-height: 1.6; }
+    .bullet-dot { color: var(--text3); flex-shrink: 0; margin-top: 2px; }
+    .ai-why { background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15); border-left: 3px solid var(--blue); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 13.5px; color: var(--text); line-height: 1.6; }
+    .ai-safety { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.18); border-left: 3px solid var(--danger); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 13.5px; color: var(--text); line-height: 1.6; display: flex; gap: 8px; align-items: flex-start; }
+    .safety-icon { flex-shrink: 0; }
+    .db-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-family: var(--mono); color: var(--green); margin-top: 10px; }
+    .db-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+    .ai-raw { font-size: 14px; color: var(--text); line-height: 1.75; white-space: pre-wrap; }
+
+    /* ── TSG Suggest Banner ── */
+    .tsg-suggest-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: var(--tsg-bg);
+      border: 1px solid var(--tsg-border);
+      border-radius: 10px;
+      animation: msgIn 0.3s ease-out;
+    }
+    .tsg-suggest-left { display: flex; align-items: center; gap: 8px; }
+    .tsg-suggest-icon {
+      width: 28px; height: 28px;
+      background: rgba(244,114,182,0.15); border: 1px solid var(--tsg-border);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .tsg-suggest-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+    .tsg-suggest-text strong { color: var(--tsg); }
+    .tsg-suggest-actions { display: flex; align-items: center; gap: 8px; }
+    .tsg-yes-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--tsg); color: #fff;
+      border: none; border-radius: 8px; padding: 6px 14px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .tsg-yes-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .tsg-no-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; color: var(--text3);
+      border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .tsg-no-btn:hover { background: var(--surface2); color: var(--text2); }
+
+    /* ── DB Records Consent Banner ── */
+    .db-suggest-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: rgba(16,185,129,0.07);
+      border: 1px solid rgba(16,185,129,0.28);
+      border-radius: 10px;
+      animation: msgIn 0.3s ease-out;
+    }
+    .db-suggest-left { display: flex; align-items: center; gap: 8px; }
+    .db-suggest-icon {
+      width: 28px; height: 28px;
+      background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .db-suggest-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+    .db-suggest-text strong { color: var(--green); }
+    .db-suggest-actions { display: flex; align-items: center; gap: 8px; }
+    .db-yes-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--green); color: #fff;
+      border: none; border-radius: 8px; padding: 6px 14px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .db-yes-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .db-no-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent; color: var(--text3);
+      border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .db-no-btn:hover { background: var(--surface2); color: var(--text2); }
+
+    /* ── TSG Record Cards ── */
+    .tsg-records-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .tsg-records-title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10.5px; font-family: var(--mono); font-weight: 600;
+      color: var(--tsg); text-transform: uppercase; letter-spacing: 0.07em;
+      margin-bottom: 10px;
+    }
+    .tsg-records-title-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--tsg); }
+    .tsg-records-grid { display: flex; flex-direction: column; gap: 8px; }
+    .tsg-record-card { background: var(--tsg-bg); border: 1px solid var(--tsg-border); border-radius: 10px; padding: 12px 14px; }
+    .tsg-record-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .tsg-record-num {
+      width: 20px; height: 20px;
+      background: rgba(244,114,182,0.15); border: 1px solid var(--tsg-border);
+      border-radius: 5px; font-size: 10px; font-family: var(--mono);
+      color: var(--tsg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .tsg-record-machine { font-size: 11.5px; font-weight: 600; color: var(--tsg); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+    .tsg-line-badge {
+      margin-left: auto;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-family: var(--mono); font-weight: 600;
+      padding: 2px 7px; border-radius: 10px;
+      background: rgba(244,114,182,0.1); border: 1px solid var(--tsg-border);
+      color: var(--tsg);
+    }
+    .tsg-record-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 5px; font-size: 12.5px; line-height: 1.5; }
+    .tsg-record-row:last-child { margin-bottom: 0; }
+    .tsg-record-label { font-size: 10px; font-family: var(--mono); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); min-width: 66px; padding-top: 1px; flex-shrink: 0; }
+    .tsg-record-val { color: var(--text2); }
+    .tsg-record-corrective { color: var(--text); font-weight: 500; }
+
+    /* Thinking */
+    .thinking { display: flex; gap: 12px; align-items: center; padding: 8px 0; }
+    .think-avatar { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #000; flex-shrink: 0; }
+    .think-dots { display: flex; gap: 4px; align-items: center; height: 28px; }
+    .think-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: bounce 1.2s ease-in-out infinite; }
+    .think-dot:nth-child(2){animation-delay:0.15s}
+    .think-dot:nth-child(3){animation-delay:0.3s}
+    @keyframes bounce { 0%,80%,100%{transform:scale(0.8);opacity:0.5} 40%{transform:scale(1.2);opacity:1} }
+
+    /* ── Input area ── */
+    .input-area { flex-shrink: 0; padding: 12px 24px 20px; background: var(--bg); }
+    .input-wrap {
+      max-width: 780px; margin: 0 auto;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 16px; padding: 12px 12px 10px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-wrap:focus-within { border-color: rgba(217,119,6,0.4); box-shadow: 0 0 0 3px var(--accent-glow); }
+    textarea#query-input { width: 100%; background: transparent; border: none; outline: none; resize: none; font-family: var(--font); font-size: 14.5px; color: var(--text); line-height: 1.6; min-height: 24px; max-height: 180px; overflow-y: auto; }
+    textarea#query-input::placeholder { color: var(--text3); }
+    textarea#query-input::-webkit-scrollbar { width: 3px; }
+    textarea#query-input::-webkit-scrollbar-thumb { background: var(--surface3); }
+    .input-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .context-label { font-size: 11.5px; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+    .context-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+
+    /* ── ★ NEW: Active Filters in Input Bar ── */
+    .active-filters-wrap {
+      display: none; align-items: center; gap: 5px; flex-wrap: wrap;
+    }
+    .active-filters-wrap.visible { display: flex; }
+    .active-filter-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10.5px; font-family: var(--mono); font-weight: 500;
+      border-radius: 12px; padding: 2px 9px;
+      border: 1px solid rgba(45,212,191,0.35);
+      color: var(--teal); background: rgba(45,212,191,0.08);
+      cursor: pointer; transition: all 0.13s;
+    }
+    .active-filter-chip:hover { background: rgba(45,212,191,0.18); }
+    .active-filter-chip-x { font-size: 11px; opacity: 0.6; }
+    .active-filter-chip:hover .active-filter-chip-x { opacity: 1; }
+
+    .active-model-pill {
+      display: none; align-items: center; gap: 5px;
+      background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.3);
+      border-radius: 12px; padding: 3px 10px;
+      font-size: 11px; font-family: var(--mono); color: var(--teal);
+    }
+    .active-model-pill.visible { display: flex; }
+    .pill-x { cursor: pointer; opacity: 0.6; font-size: 13px; }
+    .pill-x:hover { opacity: 1; }
+
+    .input-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-family: var(--font); }
+    .icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+    .icon-btn.recording { background: rgba(239,68,68,0.15); border-color: var(--danger); color: var(--danger); animation: pulseRed 0.8s ease-in-out infinite; }
+    @keyframes pulseRed { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
+    .send-btn { width: 34px; height: 34px; border-radius: 8px; border: none; background: var(--accent); color: #000; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+    .send-btn:hover:not(:disabled) { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 12px var(--accent-glow); }
+    .send-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+    .input-hint { text-align: center; font-size: 11px; color: var(--text3); padding-top: 6px; }
+
+    /* ── DB record cards ── */
+    .db-records-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .db-records-title { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-family: var(--mono); font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+    .db-records-grid { display: flex; flex-direction: column; gap: 8px; }
+    .db-record-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+    .db-record-card.best-record { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.05); }
+    .db-record-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .db-record-num { width: 18px; height: 18px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 4px; font-size: 10px; font-family: var(--mono); color: var(--text3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .db-record-machine { font-size: 11.5px; font-weight: 600; color: var(--text2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+    .db-record-model { font-size: 10.5px; font-family: var(--mono); font-weight: 600; color: var(--teal); background: rgba(45,212,191,0.1); border: 1px solid rgba(45,212,191,0.28); border-radius: 8px; padding: 1px 7px; }
+    .loss-time-badge {
+      margin-left: auto;
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-family: var(--mono); font-weight: 600;
+      padding: 2px 7px; border-radius: 10px;
+      background: rgba(217,119,6,0.12); border: 1px solid rgba(217,119,6,0.3);
+      color: var(--accent2);
+    }
+    .loss-time-badge.best { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: var(--green); }
+    .db-record-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 4px; font-size: 12.5px; line-height: 1.5; }
+    .db-record-row:last-child { margin-bottom: 0; }
+    .db-record-label { font-size: 10px; font-family: var(--mono); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); min-width: 56px; padding-top: 1px; flex-shrink: 0; }
+    .db-record-val { color: var(--text2); }
+
+    /* ── Reference image inside record card ── */
+    .db-record-image-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .db-record-image-label { display: flex; align-items: center; gap: 5px; font-size: 10px; font-family: var(--mono); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--purple); margin-bottom: 8px; }
+    .db-record-img-wrap { position: relative; display: inline-block; border-radius: 8px; overflow: hidden; border: 1px solid var(--border2); cursor: zoom-in; max-width: 100%; transition: border-color 0.15s, box-shadow 0.15s; }
+    .db-record-img-wrap:hover { border-color: rgba(167,139,250,0.5); box-shadow: 0 4px 16px rgba(167,139,250,0.15); }
+    .db-record-img-wrap img { display: block; max-width: 100%; max-height: 240px; width: auto; height: auto; object-fit: contain; background: var(--bg); }
+    .db-record-img-overlay { position: absolute; inset: 0; background: rgba(167,139,250,0.0); display: flex; align-items: center; justify-content: center; transition: background 0.15s; pointer-events: none; }
+    .db-record-img-wrap:hover .db-record-img-overlay { background: rgba(167,139,250,0.08); }
+    .db-record-img-zoom-icon { font-size: 22px; opacity: 0; transition: opacity 0.15s; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+    .db-record-img-wrap:hover .db-record-img-zoom-icon { opacity: 1; }
+    .db-record-img-filename { font-size: 10px; color: var(--text3); margin-top: 5px; font-family: var(--mono); }
+
+    /* ── Image lightbox ── */
+    .img-lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 2000; align-items: center; justify-content: center; cursor: zoom-out; animation: fadeIn 0.15s ease-out; }
+    .img-lightbox.open { display: flex; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .img-lightbox-inner { position: relative; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .img-lightbox-inner img { max-width: 90vw; max-height: 82vh; border-radius: 10px; box-shadow: 0 24px 80px rgba(0,0,0,0.8); object-fit: contain; cursor: default; }
+    .img-lightbox-label { font-size: 12px; color: rgba(255,255,255,0.55); font-family: var(--mono); text-align: center; }
+    .img-lightbox-close { position: absolute; top: -14px; right: -14px; width: 32px; height: 32px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--text2); cursor: pointer; transition: all 0.15s; line-height: 1; }
+    .img-lightbox-close:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .img-lightbox-download { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 5px 12px; font-size: 11px; color: var(--text2); cursor: pointer; font-family: var(--font); transition: all 0.15s; text-decoration: none; }
+    .img-lightbox-download:hover { background: var(--surface3); color: var(--text); }
+
+    .error-toast { max-width: 780px; margin: 0 auto 12px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #fca5a5; display: flex; align-items: center; gap: 8px; }
+
+    /* ── TTS ── */
+    .bubble-footer { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .tts-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 11px; color: var(--text3); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+    .tts-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text2); }
+    .tts-btn.speaking { background: rgba(217,119,6,0.1); border-color: rgba(217,119,6,0.35); color: var(--accent2); animation: speakPulse 1s ease-in-out infinite; }
+    @keyframes speakPulse { 0%,100%{opacity:1} 50%{opacity:0.65} }
+
+    .copy-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px;
+  font-size: 11px; color: var(--text3); cursor: pointer;
+  font-family: var(--font); transition: all 0.15s;
+}
+.copy-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text2); }
+.copy-btn.copied { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.35); color: var(--green); }
+
+    /* ── Diagram ── */
+    .diagram-wrap { margin-top: 18px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px; overflow: hidden; }
+    .diagram-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, rgba(167,139,250,0.08), rgba(167,139,250,0.02)); }
+    .diagram-title-row { display: flex; align-items: center; gap: 8px; }
+    .diagram-icon { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, rgba(167,139,250,0.3), rgba(167,139,250,0.1)); border: 1px solid rgba(167,139,250,0.25); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .diagram-title-text { font-size: 12px; font-weight: 600; color: var(--purple); font-family: var(--mono); letter-spacing: 0.02em; }
+    .diagram-desc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .diagram-actions { display: flex; align-items: center; gap: 6px; }
+    .diagram-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border2); border-radius: 6px; padding: 4px 10px; font-size: 11px; color: var(--text3); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+    .diagram-btn:hover { background: var(--surface); color: var(--text2); border-color: rgba(167,139,250,0.3); }
+    .diagram-body { padding: 20px; overflow-x: auto; background: var(--bg); }
+    .diagram-body svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+    .diagram-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--border); background: var(--surface2); }
+    .legend-label { font-size: 10px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .legend-name { font-size: 11px; color: var(--text2); }
+
+    /* ── Give more ── */
+    .give-more-wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; }
+    .give-more-wrap.give-more-done { justify-content: center; font-size: 11.5px; font-family: var(--mono); color: var(--green); background: rgba(16,185,129,0.05); border-color: rgba(16,185,129,0.2); gap: 6px; }
+    .give-more-info { font-size: 11.5px; color: var(--text3); font-family: var(--mono); }
+    .give-more-info strong { color: var(--text2); }
+    .give-more-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--surface3); border: 1px solid var(--border2); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--accent2); cursor: pointer; font-family: var(--font); font-weight: 500; transition: all 0.15s; }
+    .give-more-btn:hover:not(:disabled) { background: rgba(217,119,6,0.12); border-color: rgba(217,119,6,0.35); transform: translateY(-1px); }
+    .give-more-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .give-more-card { animation: msgIn 0.25s ease-out; }
+
+    .stop-btn {
+      width: 34px; height: 34px; border-radius: 8px; border: none;
+      background: var(--danger); color: #fff; font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; flex-shrink: 0;
+      animation: pulseRed 0.8s ease-in-out infinite;
+    }
+    .stop-btn:hover { background: #b91c1c; transform: translateY(-1px); }
+
+    .opl-upload-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; color: var(--purple); cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .opl-upload-btn:hover { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.5); }
+
+    .opl-preview-wrap {
+      display: none; align-items: flex-start; gap: 10px;
+      margin-bottom: 8px; padding: 10px 12px;
+      background: rgba(167,139,250,0.07); border: 1px solid rgba(167,139,250,0.25);
+      border-radius: 10px;
+    }
+    .opl-preview-wrap.visible { display: flex; }
+    .opl-preview-img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border2); flex-shrink: 0; }
+    .opl-preview-info { flex: 1; }
+    .opl-preview-name { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-bottom: 4px; }
+    .opl-preview-hint { font-size: 11px; color: var(--text3); }
+    .opl-preview-remove { font-size: 18px; color: var(--text3); cursor: pointer; line-height: 1; padding: 2px 4px; transition: color 0.15s; }
+    .opl-preview-remove:hover { color: var(--danger); }
+
+    /* OCR result card */
+    .ocr-result-card {
+      margin-top: 12px; padding: 14px 16px;
+      background: rgba(167,139,250,0.07); border: 1px solid rgba(167,139,250,0.28);
+      border-left: 3px solid var(--purple); border-radius: 0 10px 10px 0;
+    }
+    .ocr-result-label { font-size: 10px; font-family: var(--mono); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--purple); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .ocr-result-text { font-size: 13.5px; color: var(--text); line-height: 1.75; white-space: pre-wrap; }
+    .ocr-save-btn {
+      display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+      background: var(--purple); color: #fff; border: none; border-radius: 7px;
+      padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+      font-family: var(--font); transition: all 0.15s;
+    }
+    .ocr-save-btn:hover { opacity: 0.88; }
+
+
+    /* ── Rendered Markdown Table ── */
+.md-table-wrap { overflow-x: auto; margin: 10px 0; }
+.md-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; font-family: var(--font);
+  border: 1px solid var(--border2);
+  border-radius: 8px; overflow: hidden;
+}
+.md-table th {
+  background: var(--surface3);
+  color: var(--accent2);
+  font-size: 10.5px; font-family: var(--mono);
+  font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 12px; text-align: left;
+  border-bottom: 2px solid var(--border2);
+  white-space: nowrap;
+}
+.md-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: top;
+  line-height: 1.5;
+}
+.md-table tr:last-child td { border-bottom: none; }
+.md-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.md-table tr:hover td {
+  background: var(--accent-glow);
+  color: var(--text);
+  transition: background 0.15s;
+}
+.md-table td:first-child {
+  font-family: var(--mono); font-size: 11.5px;
+  color: var(--text3); font-weight: 600;
+}
+
+
+.selection-ask-btn {
+  position: absolute; z-index: 1500;
+  display: none; align-items: center; gap: 6px;
+  background: var(--accent); color: #000;
+  border: none; border-radius: 8px; padding: 6px 12px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--font);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  white-space: nowrap;
+  animation: msgIn 0.12s ease-out;
+}
+.selection-ask-btn:hover { background: var(--accent2); }
+.selection-ask-btn.visible { display: inline-flex; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo-wrap">
+      <div class="logo-icon">M</div>
+      <div>
+        <div class="logo-text">MTTR Assistant</div>
+        <div class="logo-sub">Maintenance Intelligence</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-chip">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+      </div>
+      <div class="tsg-chip" id="tsg-chip">
+        <div class="tsg-chip-dot"></div>
+        <span id="tsg-chip-text">TSG ready</span>
+      </div>
+      <div class="model-chip" id="header-model-chip" title="Click to clear model filter" onclick="clearModelFilter()">
+        <span>⬡</span>
+        <span id="header-model-label"></span>
+        <span class="model-chip-x">✕</span>
+      </div>
+      <button class="icon-btn" id="theme-toggle" title="Toggle theme" onclick="toggleTheme()">🌙</button>
+      <button class="new-btn" onclick="newConversation()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        New chat
+      </button>
+      <button class="new-btn" onclick="window.location.href='/opl'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Create OPL
+      </button>
+    </div>
+  </header>
+
+  <div class="convo-area" id="convo-area">
+    <div class="welcome" id="welcome-screen">
+      <div class="welcome-icon">⚡</div>
+      <h2>How can I help you today?</h2>
+      <p>Ask about machine problems from the maintenance database, troubleshoot a live fault, or ask a general question about any equipment. Include a <strong>model name</strong> to filter results. Say <strong>diagram</strong> for a visual flowchart, or ask from the <strong>Troubleshooting Guide</strong> for in-depth fault entries.</p>
+      <div class="suggestions">
+        <div class="suggestion-pill" onclick="useSuggestion(this)">What is a wave soldering machine?</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Top 3 problems in stencil printer</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Motor is overheating, how to fix?</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Common faults of reflow oven</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Show a flowchart for reflow oven process</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Conveyor jam from troubleshooting guide</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Give me all work done by Ram in 2026</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">How many board jam issues in night shift?</div>
+        <div class="suggestion-pill" onclick="useSuggestion(this)">Total downtime in 2026</div>
+      </div>
+    </div>
+    <div class="messages" id="messages-container" style="display:none;"></div>
+  </div>
+
+  <div class="input-area">
+    <div id="error-area"></div>
+    <div class="input-wrap">
+      <div class="opl-preview-wrap" id="opl-preview-wrap">
+        <img class="opl-preview-img" id="opl-preview-img" src="" alt="OPL preview"/>
+        <div class="opl-preview-info">
+          <div class="opl-preview-name" id="opl-preview-name">opl_image.jpg</div>
+          <div class="opl-preview-hint">📖 Hindi text will be extracted and formatted by AI</div>
+        </div>
+        <span class="opl-preview-remove" onclick="clearOplImage()" title="Remove image">✕</span>
+      </div>
+
+      <textarea
+        id="query-input"
+        placeholder="Ask about machines, say 'from troubleshooting guide' for TSG answers, or include model name to filter…"
+        rows="1"
+        oninput="autoResize(this)"
+      ></textarea>
+      <div class="input-actions">
+        <div class="context-label" id="context-indicator" style="display:none;">
+          <div class="context-dot"></div>
+          Conversation active
+        </div>
+
+        <!-- ★ NEW: Active filter chips in input bar -->
+        <div class="active-filters-wrap" id="active-filters-wrap"></div>
+
+        <div class="active-model-pill" id="active-model-pill">
+          <span>⬡</span>
+          <span id="active-model-name"></span>
+          <span class="pill-x" onclick="clearModelFilter()" title="Clear model filter">✕</span>
+        </div>
+
+        <button class="opl-upload-btn" onclick="document.getElementById('opl-file-input').click()" title="Upload OPL image (Hindi text extraction)">
+          📷 Upload OPL
+        </button>
+        <input type="file" id="opl-file-input" accept="image/*" capture="environment" style="display:none;" onchange="handleOplImageSelect(event)"/>
+
+        <div class="input-right">
+          <button class="icon-btn" id="mic-btn" title="Voice input" onclick="toggleMic()">🎤</button>
+          <button class="send-btn" id="send-btn" onclick="submitQuery()" title="Send (Enter)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 13V3M3 8l5-5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="stop-btn" id="stop-btn" onclick="stopGeneration()" title="Stop generation" style="display:none;">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="input-hint">Enter to send · Shift+Enter for new line · Click a filter badge to remove it · "from troubleshooting guide" for TSG</div>
+  </div>
+<button class="selection-ask-btn" id="selection-ask-btn" onmousedown="event.preventDefault()" onclick="askFromSelection()">
+  💬 Ask MTTR
+</button>
+</div>
+
+
+<!-- ── Image Lightbox ── -->
+<div class="img-lightbox" id="img-lightbox" onclick="handleLightboxClick(event)">
+  <div class="img-lightbox-inner" id="img-lightbox-inner">
+    <div class="img-lightbox-close" onclick="closeLightbox()" title="Close">✕</div>
+    <img id="img-lightbox-img" src="" alt="Reference image"/>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="img-lightbox-label" id="img-lightbox-label"></div>
+      <a class="img-lightbox-download" id="img-lightbox-download" href="#" download title="Download image">⬇ Download</a>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  let conversationHistory  = [];
+  let isFirstMessage       = true;
+  let isLoading            = false;
+  let recognition          = null;
+  let isRecording          = false;
+  let currentUtterance     = null;
+  let lastAiResponseText   = '';
+  let activeModelFilter    = null;
+  let currentQueryForMore  = null;
+  let currentOffset        = 0;
+  let totalRecordsFound    = 0;
+
+  // TSG state
+  let pendingTsgQuery      = null;
+  let pendingTsgMachine    = null;
+
+  // DB records consent state — keyed by bannerId
+  const _pendingDbRecords = {};
+
+  // ★ NEW: Active parsed filters (persists across turns so user can clear them)
+  let activeFilters = {};
+  let lastExecutionPath = null;
+
+  const PAGE_SIZE = 8;
+
+  let currentAbortController = null;
+  let oplImageFile   = null;
+  let oplImageBase64 = null;
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  checkStatus();
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ★ NEW: FILTER BADGE HELPERS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Map of filter key → human label and badge class
+  const FILTER_LABELS = {
+    worker:          { label: k => '👤 ' + k, cls: 'f-worker' },
+    work_done_by:    { label: k => '👤 ' + k, cls: 'f-worker' },
+    machine:         { label: k => '⚙️ ' + k, cls: 'f-machine' },
+    smd_line:        { label: k => '🏭 Line ' + k, cls: 'f-machine' }, 
+    model:           { label: k => '⬡ ' + k,  cls: 'f-model'  },
+    year:            { label: k => '📅 ' + k, cls: 'f-year'   },
+    shift:           { label: k => '🌙 ' + k + ' shift', cls: 'f-shift' },
+    spare_parts:     { label: k => '🔩 ' + k, cls: 'f-spare'  },
+    date_from:       { label: k => '📅 from ' + k, cls: 'f-date' },
+    date_to:         { label: k => '📅 to ' + k,   cls: 'f-date' },
+    problem_keyword: { label: k => '🔍 ' + k, cls: 'f-problem' },
+  };
+
+  /**
+   * Build the filter badges HTML shown inside the AI bubble.
+   * Clicking a badge removes that filter and re-runs the query.
+   */
+  function buildFilterBadgesHTML(parsedFilters, executionPath, originalQuery) {
+    if (!parsedFilters || Object.keys(parsedFilters).length === 0) return '';
+
+    const safeQuery = (originalQuery || '').replace(/'/g, "\\'");
+
+    // Execution path badge
+    const pathLabels = {
+      sql_only:      '🗄 SQL filter',
+      semantic_only: '🔎 Semantic',
+      hybrid:        '⚡ Hybrid',
+      analytics:     '📊 Analytics',
+      tsg:           '📖 TSG',
+    };
+    const pathLabel = pathLabels[executionPath] || executionPath || '';
+    const pathBadge = pathLabel
+      ? `<span class="exec-path-badge ${executionPath}" title="Query execution mode">${pathLabel}</span>`
+      : '';
+
+    // Filter chips
+    const chips = Object.entries(parsedFilters)
+      .filter(([k, v]) => v && FILTER_LABELS[k])
+      .map(([k, v]) => {
+        const { label, cls } = FILTER_LABELS[k];
+        const display = label(String(v));
+        const safeKey = k.replace(/'/g, "\\'");
+        const safeVal = String(v).replace(/'/g, "\\'");
+        return `<span class="filter-badge ${cls}" 
+          onclick="removeFilterAndRefetch('${safeKey}', '${safeVal}', '${safeQuery}')"
+          title="Click to remove this filter">
+          ${esc(display)}<span class="filter-badge-x">✕</span>
+        </span>`;
+      }).join('');
+
+    if (!chips && !pathBadge) return '';
+
+    return `<div class="filter-badges-row">${pathBadge}${chips}</div>`;
+  }
+
+  /**
+   * Remove a specific filter key and re-run the query without it.
+   * The query input gets pre-populated so the user can see what changed.
+   */
+  function removeFilterAndRefetch(filterKey, filterValue, originalQuery) {
+    // Remove this filter from the active set
+    delete activeFilters[filterKey];
+    // For worker also remove the alias
+    if (filterKey === 'worker') delete activeFilters['work_done_by'];
+    if (filterKey === 'work_done_by') delete activeFilters['worker'];
+
+    // Build a modified query by removing the filter value from the text
+    let newQuery = originalQuery;
+    // Try to strip the value from the query text (best-effort)
+    if (filterValue && filterValue.length > 1) {
+      const re = new RegExp('\\b' + filterValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+      newQuery = newQuery.replace(re, '').replace(/\s{2,}/g, ' ').trim();
+    }
+
+    // Special cleanup for common filter phrases
+    if (filterKey === 'year') {
+      newQuery = newQuery.replace(/\bin\s+20\d{2}\b/gi, '').trim();
+    }
+    if (filterKey === 'shift') {
+      newQuery = newQuery.replace(/\b(night|general|morning|day)\s*(shift)?\b/gi, '').trim();
+    }
+
+    // Pre-fill the input box with the modified query
+    const input = document.getElementById('query-input');
+    input.value = newQuery || originalQuery;
+    autoResize(input);
+    input.focus();
+
+    // Update the active filters display in the input bar
+    updateActiveFiltersDisplay();
+
+    // Show a hint toast
+    showInfoToast(`Filter "${filterValue}" removed. Edit query and press Enter to search again.`);
+  }
+
+  /**
+   * Update the active filter chips shown inside the input bar
+   * (smaller chips that persist to remind the user what's being filtered).
+   */
+  function updateActiveFiltersDisplay() {
+    const wrap = document.getElementById('active-filters-wrap');
+    if (!wrap) return;
+
+    const chips = Object.entries(activeFilters)
+      .filter(([k, v]) => v && FILTER_LABELS[k])
+      .map(([k, v]) => {
+        const display = FILTER_LABELS[k].label(String(v));
+        return `<span class="active-filter-chip" 
+          onclick="clearSingleActiveFilter('${k}')"
+          title="Click to remove filter: ${esc(String(v))}">
+          ${esc(display)}<span class="active-filter-chip-x">✕</span>
+        </span>`;
+      }).join('');
+
+    if (chips) {
+      wrap.innerHTML = chips;
+      wrap.classList.add('visible');
+    } else {
+      wrap.innerHTML = '';
+      wrap.classList.remove('visible');
+    }
+  }
+
+  function clearSingleActiveFilter(key) {
+    delete activeFilters[key];
+    if (key === 'worker') delete activeFilters['work_done_by'];
+    if (key === 'work_done_by') delete activeFilters['worker'];
+    updateActiveFiltersDisplay();
+  }
+
+  /**
+   * ★ NEW: Format analytics response into a structured card.
+   * The analytics response from the backend is markdown-ish text.
+   * We parse it and render it as a proper table or stat card.
+   */
+  function formatAnalyticsResponse(text, executionPath) {
+    // Count response: "Found **X records**..."
+    const countMatch = text.match(/Found \*\*(\d+) maintenance record/i);
+    if (countMatch) {
+      const count = countMatch[1];
+      const rest  = text.replace(/Found \*\*\d+ maintenance records?\*\*/i, '').trim();
+      return `<div class="analytics-card">
+        <div class="analytics-card-label">📊 Count result</div>
+        <div class="analytics-stat-big">${esc(count)}</div>
+        <div class="analytics-card-content">${renderInline(esc('maintenance records' + rest))}</div>
+      </div>`;
+    }
+
+    // Downtime total: "Total downtime..."
+    const downtimeMatch = text.match(/Total downtime(.+?):\s*\*\*(.+?)\*\*/i);
+    if (downtimeMatch) {
+      return `<div class="analytics-card">
+        <div class="analytics-card-label">⏱ Total downtime</div>
+        <div class="analytics-stat-big">${esc(downtimeMatch[2])}</div>
+        <div class="analytics-card-content">${renderInline(esc(text))}</div>
+      </div>`;
+    }
+
+    // List responses (analytics_shift, analytics_machine, analytics_worker, analytics_problem)
+    // These come as "• **Name**: count, avg..." or "1. **Name**: count..."
+    const listItems = [];
+    const bulletRe  = /[•\-]\s*\*\*(.+?)\*\*[:\s]*(\d+)/g;
+    const numberedRe= /\d+\.\s*\*\*(.+?)\*\*[:\s]*(\d+)/g;
+
+    let match;
+    let re = text.includes('•') ? bulletRe : numberedRe;
+    while ((match = re.exec(text)) !== null) {
+      listItems.push({ name: match[1], count: parseInt(match[2], 10) });
+    }
+
+    if (listItems.length > 0) {
+      const maxCount = Math.max(...listItems.map(i => i.count));
+      // Extract title from first line
+      const titleMatch = text.match(/^\*\*(.+?)\*\*/);
+      const title = titleMatch ? titleMatch[1] : 'Analytics result';
+
+      const rows = listItems.map((item, idx) => {
+        const pct  = maxCount > 0 ? Math.round((item.count / maxCount) * 100) : 0;
+        return `<tr>
+          <td><span class="analytics-rank">${idx + 1}</span></td>
+          <td>${esc(item.name)}</td>
+          <td>
+            <div class="analytics-bar-wrap">
+              <span style="font-family:var(--mono);font-size:12px;color:var(--accent2);font-weight:600">${item.count}</span>
+              <div class="analytics-bar"><div class="analytics-bar-fill" style="width:${pct}%"></div></div>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      return `<div class="analytics-card">
+        <div class="analytics-card-label">📊 ${esc(title)}</div>
+        <table class="analytics-table">
+          <thead><tr><th>#</th><th>Name</th><th>Count</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    // Fallback: render as general text with strong formatting
+    return `<div class="analytics-card">
+      <div class="analytics-card-label">📊 Analytics result</div>
+      <div class="analytics-card-content">${formatGeneral(text)}</div>
+    </div>`;
+  }
+
+  function showInfoToast(msg) {
+    const area = document.getElementById('error-area');
+    area.innerHTML = `<div class="error-toast" style="background:rgba(59,130,246,0.08);border-color:rgba(59,130,246,0.25);color:#93c5fd;">ℹ️ ${esc(msg)}</div>`;
+    setTimeout(() => { if (area.innerHTML.includes(esc(msg).slice(0,20))) area.innerHTML = ''; }, 4000);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STOP / LOADING
+  // ─────────────────────────────────────────────────────────────────────────
+  function stopGeneration() {
+    if (currentAbortController) {
+      currentAbortController.abort();
+      currentAbortController = null;
+    }
+    isLoading = false;
+    setLoadingState(false);
+    document.querySelectorAll('[id^="think-"]').forEach(el => el.remove());
+    appendAIMessage(
+      '_Generation stopped._', 'followup', 0, [], null, null,
+      false, 0, 0, [], false, null, null, null
+    );
+    scrollToBottom();
+  }
+
+  function setLoadingState(loading) {
+    const sendBtn = document.getElementById('send-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    sendBtn.style.display = loading ? 'none' : 'flex';
+    stopBtn.style.display = loading ? 'flex' : 'none';
+  }
+
+  function handleOplImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    oplImageFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      oplImageBase64 = e.target.result;
+      document.getElementById('opl-preview-img').src = oplImageBase64;
+      document.getElementById('opl-preview-name').textContent = file.name;
+      document.getElementById('opl-preview-wrap').classList.add('visible');
+      document.getElementById('query-input').value = 'Extract and format the Hindi text from this OPL image';
+      autoResize(document.getElementById('query-input'));
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  }
+
+  function clearOplImage() {
+    oplImageFile   = null;
+    oplImageBase64 = null;
+    document.getElementById('opl-preview-wrap').classList.remove('visible');
+    document.getElementById('opl-preview-img').src = '';
+    document.getElementById('query-input').value = '';
+    autoResize(document.getElementById('query-input'));
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+  }
+
+  // ── Status ────────────────────────────────────────────────────────────────
+  async function checkStatus() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      const dot  = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (d.records_indexed > 0 && d.ollama_running) {
+        dot.className = 'status-dot ok';
+        text.textContent = `${d.records_indexed} records · ready`;
+      } else if (d.records_indexed === 0) {
+        dot.className = 'status-dot err';
+        text.textContent = 'No records found';
+      } else {
+        dot.className = 'status-dot err';
+        text.textContent = 'LLM offline';
+      }
+      if (d.tsg_records_indexed > 0) {
+        const chip = document.getElementById('tsg-chip');
+        document.getElementById('tsg-chip-text').textContent = `TSG · ${d.tsg_records_indexed} entries`;
+        chip.classList.add('active');
+      }
+    } catch {
+      document.getElementById('status-dot').className = 'status-dot err';
+      document.getElementById('status-text').textContent = 'Server error';
+    }
+  }
+
+  // ── Model filter ──────────────────────────────────────────────────────────
+  function setModelFilter(modelName) {
+    if (!modelName) { clearModelFilter(); return; }
+    activeModelFilter = modelName;
+    document.getElementById('header-model-label').textContent = modelName;
+    document.getElementById('header-model-chip').classList.add('active');
+    document.getElementById('active-model-name').textContent = modelName;
+    document.getElementById('active-model-pill').classList.add('visible');
+    // Also add to activeFilters
+    activeFilters['model'] = modelName;
+    updateActiveFiltersDisplay();
+  }
+
+  function clearModelFilter() {
+    activeModelFilter = null;
+    document.getElementById('header-model-chip').classList.remove('active');
+    document.getElementById('active-model-pill').classList.remove('visible');
+    delete activeFilters['model'];
+    updateActiveFiltersDisplay();
+  }
+
+  // ── Diagram helpers ───────────────────────────────────────────────────────
+  function isDiagramRequest(query) {
+    return /\b(diagram|flowchart|flow chart|flow diagram|visuali[sz]e|visuali[sz]ation|draw|sketch|show me a|chart|process flow|workflow|schematic|block diagram|step diagram|sequence|timeline|graph)\b/i.test(query);
+  }
+
+  function isContextDiagramRequest(query) {
+    return isDiagramRequest(query) && /\b(above|previous|last|that|this|the\s*(above|previous|last|mentioned|given|said))\b/i.test(query);
+  }
+
+  // ── TSG helpers ───────────────────────────────────────────────────────────
+  function isTsgYesReply(query) {
+    return /^\s*(yes|yeah|yep|yup|sure|ok(ay)?|please|go ahead|show|do it|give|y)\s*[.!]?\s*$/i.test(query.trim());
+  }
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  function newConversation() {
+    conversationHistory = [];
+    isFirstMessage      = true;
+    lastAiResponseText  = '';
+    currentQueryForMore = null;
+    currentOffset       = 0;
+    totalRecordsFound   = 0;
+    pendingTsgQuery     = null;
+    pendingTsgMachine   = null;
+    // ★ Clear active filters
+    activeFilters       = {};
+    lastExecutionPath   = null;
+    updateActiveFiltersDisplay();
+    clearModelFilter();
+    document.getElementById('messages-container').innerHTML = '';
+    document.getElementById('messages-container').style.display = 'none';
+    document.getElementById('welcome-screen').style.display = 'flex';
+    document.getElementById('context-indicator').style.display = 'none';
+    document.getElementById('error-area').innerHTML = '';
+    document.getElementById('query-input').value = '';
+    autoResize(document.getElementById('query-input'));
+    stopTTS();
+  }
+
+  function useSuggestion(el) {
+    document.getElementById('query-input').value = el.textContent;
+    autoResize(document.getElementById('query-input'));
+    document.getElementById('query-input').focus();
+  }
+
+  // ── Follow-up detection ───────────────────────────────────────────────────
+  function isFollowUpQuestion(query) {
+    const q = query.trim().toLowerCase();
+    if (q.split(/\s+/).length <= 4) return true;
+    const patterns = [
+      /^(ok|okay|and|also|so|but|then|now|what about|what if|why|how|can you|could you|tell me more|explain|elaborate|give me more|more detail)/,
+      /\b(this|that|it|these|those|the (above|previous|last|mentioned))\b/,
+      /^(yes|no|correct|right|sure|got it|understood|makes sense)/,
+      /\?$/,
+    ];
+    for (const p of patterns) {
+      if (p.test(q)) {
+        if (hasMachineOrSymptom(q)) return false;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hasMachineOrSymptom(q) {
+    return /\b(machine|printer|oven|conveyor|motor|nozzle|feeder|solder|reflow|wave|pick.and.place|stencil|pcb|board|belt|pump|valve|sensor|robot|arm|spindle|drill|laser|cutter)\b/.test(q)
+        || /\b(problem|issue|fault|error|alarm|overheat|vibrat|jam|clog|broken|fail|not working|noise)\b/.test(q);
+  }
+
+  // ── TSG banner callbacks ──────────────────────────────────────────────────
+  function onTsgYesClick(originalQuery, detectedMachine, bannerId) {
+    const banner = document.getElementById(bannerId);
+    if (banner) banner.remove();
+    executeTsgLookup(originalQuery, detectedMachine);
+  }
+
+  function onTsgNoClick(bannerId) {
+    const banner = document.getElementById(bannerId);
+    if (banner) {
+      banner.style.opacity      = '0.5';
+      banner.style.pointerEvents = 'none';
+      banner.innerHTML = `<div style="font-size:12px;color:var(--text3);font-family:var(--mono);">✓ Got it, staying with MTTR records only.</div>`;
+    }
+    pendingTsgQuery   = null;
+    pendingTsgMachine = null;
+  }
+
+  // ── DB Records consent banner callbacks ───────────────────────────────────
+  function onDbYesClick(bannerId) {
+    const meta = _pendingDbRecords[bannerId];
+    if (!meta) return;
+    const banner = document.getElementById(bannerId);
+    if (banner) banner.remove();
+
+    currentQueryForMore = meta.queryForMore;
+    currentOffset       = 0;
+    totalRecordsFound   = meta.totalFound;
+
+    const anchor = document.getElementById('db-anchor-' + bannerId);
+    if (!anchor) return;
+
+    const recordsHTML = buildDbRecordsHTML(
+      meta.records, meta.hasMore, meta.totalFound,
+      meta.currentOff, meta.intent, meta.model, bannerId
+    );
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = recordsHTML;
+    const insertBefore = anchor.nextSibling;
+    while (wrapper.firstChild) {
+      anchor.parentNode.insertBefore(wrapper.firstChild, insertBefore);
+    }
+
+    delete _pendingDbRecords[bannerId];
+    scrollToBottom();
+  }
+
+  function onDbNoClick(bannerId) {
+    const banner = document.getElementById(bannerId);
+    if (banner) {
+      banner.style.opacity       = '0.5';
+      banner.style.pointerEvents = 'none';
+      banner.innerHTML = `<div style="font-size:12px;color:var(--text3);font-family:var(--mono);">✓ OK, not showing database records.</div>`;
+    }
+    delete _pendingDbRecords[bannerId];
+  }
+
+  // ── Build DB records HTML ─────────────────────────────────────────────────
+  function buildDbRecordsHTML(dbRecords, hasMore, totalFound, currentOff, intent, usedModel, bannerId) {
+    if (!dbRecords || dbRecords.length === 0) return '';
+
+    const cardItems = dbRecords.map((r, i) => {
+      const isBest   = i === 0 && r.loss_time;
+      const ltBadge  = r.loss_time   ? `<span class="loss-time-badge ${isBest ? 'best' : ''}">⏱ ${esc(r.loss_time)}</span>` : '';
+      const mdlBadge = r.model_name  ? `<span class="db-record-model">${esc(r.model_name)}</span>` : '';
+
+      const workDoneBy = r.work_done_by
+        ? `<div class="db-record-row">
+             <span class="db-record-label">Done By</span>
+             <span class="db-record-val" style="color:var(--teal);font-weight:500">${esc(r.work_done_by)}</span>
+           </div>`
+        : '';
+      const dateStr = r.date
+        ? `<div class="db-record-row">
+             <span class="db-record-label">Date</span>
+             <span class="db-record-val" style="color:var(--text3);font-family:var(--mono);font-size:11.5px">${esc(r.date)}</span>
+           </div>`
+        : '';
+      const shiftStr = r.shift
+        ? `<div class="db-record-row">
+             <span class="db-record-label">Shift</span>
+             <span class="db-record-val" style="color:var(--purple);font-size:11.5px">${esc(r.shift)}</span>
+           </div>`
+        : '';
+      const spareStr = r.spare_parts
+        ? `<div class="db-record-row">
+             <span class="db-record-label">Spare</span>
+             <span class="db-record-val" style="color:#f97316;font-size:11.5px">${esc(r.spare_parts)}</span>
+           </div>`
+        : '';
+
+      let imgBlock = '';
+      if (r.image_b64 && r.image_b64.trim()) {
+        const imgSrc = `data:${r.image_mime || 'image/jpeg'};base64,${r.image_b64}`;
+        const imgKey = `img_${Date.now()}_${i}`;
+        window._mttrImages         = window._mttrImages || {};
+        window._mttrImages[imgKey] = { src: imgSrc, filename: r.image_name || 'reference_image', mime: r.image_mime || 'image/jpeg' };
+        imgBlock = `<div class="db-record-image-row">
+          <div class="db-record-image-label"><span>📷</span> Reference Photo</div>
+          <div class="db-record-img-wrap" onclick="openLightboxByKey('${imgKey}')" title="Click to enlarge">
+            <img src="${imgSrc}" alt="${esc(r.image_name||'')}" loading="lazy"/>
+            <div class="db-record-img-overlay"><span class="db-record-img-zoom-icon">🔍</span></div>
+          </div>
+          <div class="db-record-img-filename">${esc(r.image_name||'')}</div>
+        </div>`;
+      }
+
+      return `<div class="db-record-card ${isBest ? 'best-record' : ''}">
+        <div class="db-record-header">
+          <span class="db-record-num">${i + 1}</span>
+          <span class="db-record-machine">${esc(r.machine)}</span>
+          ${mdlBadge}${ltBadge}
+        </div>
+        <div class="db-record-row">
+          <span class="db-record-label">Problem</span>
+          <span class="db-record-val">${esc(r.problem)}</span>
+        </div>
+        <div class="db-record-row">
+          <span class="db-record-label">Solution</span>
+          <span class="db-record-val">${esc(r.solution)}</span>
+        </div>
+        ${workDoneBy}${dateStr}${shiftStr}${spareStr}${imgBlock}
+      </div>`;
+    }).join('');
+
+    const lowestLabel = dbRecords[0]?.loss_time ? ` · sorted by downtime (lowest first)` : '';
+    const modelLabel  = usedModel ? ` · model: ${usedModel}` : '';
+    const shown       = (currentOff || 0) + dbRecords.length;
+
+    let giveMoreBlock = '';
+    if ((intent === 'db_lookup' || intent === 'troubleshoot') && hasMore) {
+      giveMoreBlock = `<div class="give-more-wrap" id="givemore-${bannerId}">
+        <div class="give-more-info">Showing <strong>${shown}</strong> of <strong>${totalFound}</strong> matching records</div>
+        <button class="give-more-btn" onclick="loadMoreRecords(this)">⬇ Give more records</button>
+      </div>`;
+    } else if ((intent === 'db_lookup' || intent === 'troubleshoot') && totalFound > 0) {
+      giveMoreBlock = `<div class="give-more-wrap give-more-done"><span>✓</span> All ${totalFound} matching record${totalFound > 1 ? 's' : ''} shown</div>`;
+    }
+
+    return `<div class="db-records-section">
+      <div class="db-records-title">
+        <div class="db-badge-dot"></div>
+        ${dbRecords.length} database record${dbRecords.length > 1 ? 's' : ''} used${lowestLabel}${modelLabel}
+      </div>
+      <div class="db-records-grid">${cardItems}</div>
+    </div>${giveMoreBlock}`;
+  }
+
+  // ── TSG lookup ────────────────────────────────────────────────────────────
+  async function executeTsgLookup(query, machine) {
+    if (isLoading) return;
+
+    appendUserMessage(`[Troubleshooting Guide] ${query}`);
+    conversationHistory.push({ role: 'user', content: `[Troubleshooting Guide] ${query}` });
+
+    const thinkId = showThinking();
+    isLoading = true;
+    document.getElementById('send-btn').disabled = true;
+    document.getElementById('error-area').innerHTML = '';
+
+    try {
+      const payload = {
+        query: query + ' troubleshooting guide',
+        machine_filter:     machine || null,
+        model_filter:       activeModelFilter || null,
+        tsg_followup_query: query,
+      };
+
+      const r = await fetch('/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error'); }
+      const data = await r.json();
+
+      removeThinking(thinkId);
+      conversationHistory.push({ role: 'assistant', content: data.ai_suggestion });
+
+      appendAIMessage(
+        data.ai_suggestion, 'tsg_lookup', 0, [], null, null,
+        false, data.total_records_found || 0, 0,
+        data.tsg_records_summary || [], false, null, null, 'tsg'
+      );
+    } catch (e) {
+      removeThinking(thinkId);
+      showError(e.message || 'TSG lookup failed.');
+    } finally {
+      isLoading = false;
+      document.getElementById('send-btn').disabled = false;
+      pendingTsgQuery   = null;
+      pendingTsgMachine = null;
+      scrollToBottom();
+    }
+  }
+
+  // ── Main submit ───────────────────────────────────────────────────────────
+  async function submitQuery() {
+    const input = document.getElementById('query-input');
+    const query = input.value.trim();
+    if (!query || isLoading) return;
+
+    if (oplImageBase64) {
+      await submitOplImage(query);
+      return;
+    }
+
+    document.getElementById('error-area').innerHTML = '';
+
+    if (pendingTsgQuery && isTsgYesReply(query)) {
+      input.value = '';
+      autoResize(input);
+      const q = pendingTsgQuery;
+      const m = pendingTsgMachine;
+      document.querySelectorAll('.tsg-suggest-banner').forEach(b => b.remove());
+      executeTsgLookup(q, m);
+      return;
+    }
+
+    if (isFirstMessage) {
+      document.getElementById('welcome-screen').style.display = 'none';
+      document.getElementById('messages-container').style.display = 'flex';
+    }
+
+    appendUserMessage(query);
+    input.value = '';
+    autoResize(input);
+    document.getElementById('context-indicator').style.display = 'flex';
+    conversationHistory.push({ role: 'user', content: query });
+
+    const thinkId = showThinking();
+    isLoading = true;
+    currentAbortController = new AbortController();
+    setLoadingState(true);
+
+    const sendToChat = !isFirstMessage && isFollowUpQuestion(query) && !isDiagramRequest(query);
+
+    try {
+      let aiText, intentLabel, dbCount = 0, dbRecords = [], diagData = null, detectedModel = null;
+      let hasMore = false, totalFound = 0, currentOff = 0;
+      let tsgRecords = [], suggestTsg = false;
+      let parsedFilters = null, executionPath = null, visualization = null; // ★ NEW
+
+      if (!sendToChat) {
+        const requestBody = {
+          query,
+          machine_filter: null,
+          model_filter:   activeModelFilter || null,
+        };
+        if (isContextDiagramRequest(query) && lastAiResponseText) {
+          requestBody.last_ai_response = lastAiResponseText;
+        }
+
+        const r = await fetch('/query2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+          signal: currentAbortController?.signal,
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Unknown error'); }
+        const data = await r.json();
+
+        aiText        = data.ai_suggestion;
+        intentLabel   = data.intent;
+        dbCount       = data.db_records_used || 0;
+        dbRecords     = data.db_records_summary || [];
+        diagData      = data.diagram_data || null;
+        detectedModel = data.detected_model || null;
+        hasMore       = data.has_more || false;
+        totalFound    = data.total_records_found || 0;
+        currentOff    = data.current_offset || 0;
+        tsgRecords    = data.tsg_records_summary || [];
+        suggestTsg    = data.suggest_tsg || false;
+        // ★ NEW: capture filter state from backend
+        parsedFilters = data.parsed_filters || null;
+        executionPath = data.execution_path || null;
+        visualization = data.visualization || null;
+
+        if (detectedModel) setModelFilter(detectedModel);
+        if (intentLabel !== 'diagram' && aiText) lastAiResponseText = aiText;
+
+        // ★ NEW: Persist filters for the input bar
+        if (parsedFilters && Object.keys(parsedFilters).length > 0) {
+          // Merge into activeFilters (don't wipe existing ones not in this response)
+          Object.assign(activeFilters, parsedFilters);
+          lastExecutionPath = executionPath;
+          updateActiveFiltersDisplay();
+        }
+
+        if (intentLabel === 'db_lookup' || intentLabel === 'troubleshoot') {
+          currentQueryForMore = requestBody;
+          currentOffset       = 0;
+          totalRecordsFound   = totalFound;
+        }
+
+        if (suggestTsg) {
+          pendingTsgQuery   = query;
+          pendingTsgMachine = null;
+        } else if (intentLabel !== 'tsg_lookup') {
+          pendingTsgQuery   = null;
+          pendingTsgMachine = null;
+        }
+
+        conversationHistory = [{ role: 'user', content: query }];
+        isFirstMessage = false;
+
+      } else {
+        const r = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ history: conversationHistory }),
+          signal: currentAbortController?.signal,
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Unknown error'); }
+        const data  = await r.json();
+        aiText      = data.response;
+        intentLabel = 'followup';
+        if (aiText) lastAiResponseText = aiText;
+      }
+
+      removeThinking(thinkId);
+      conversationHistory.push({ role: 'assistant', content: aiText });
+      appendAIMessage(
+        aiText, intentLabel, dbCount, dbRecords, diagData,
+        detectedModel || activeModelFilter,
+        hasMore, totalFound, currentOff,
+        tsgRecords, suggestTsg, query,
+        parsedFilters, executionPath, visualization // ★ NEW args
+      );
+
+    } catch (e) {
+      removeThinking(thinkId);
+      if (e.name !== 'AbortError') {
+        showError(e.message || 'Could not reach server. Is app.py running?');
+      }
+    } finally {
+      isLoading = false;
+      currentAbortController = null;
+      setLoadingState(false);
+      scrollToBottom();
+    }
+  }
+
+  // ── OPL image submit ──────────────────────────────────────────────────────
+  async function submitOplImage(userQuery) {
+    if (isFirstMessage) {
+      document.getElementById('welcome-screen').style.display = 'none';
+      document.getElementById('messages-container').style.display = 'flex';
+    }
+
+    const imgPreviewSrc = oplImageBase64;
+    const imgFileName   = oplImageFile?.name || 'opl_image.jpg';
+
+    appendUserMessage(`📷 OPL Image: ${imgFileName}\n${userQuery}`);
+    document.getElementById('query-input').value = '';
+    autoResize(document.getElementById('query-input'));
+    clearOplImage();
+
+    const thinkId = showThinking();
+    isLoading = true;
+    currentAbortController = new AbortController();
+    setLoadingState(true);
+    document.getElementById('context-indicator').style.display = 'flex';
+
+    try {
+      const base64Data = imgPreviewSrc.split(',')[1];
+
+      const r = await fetch('/opl-ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_base64: base64Data,
+          filename:     imgFileName,
+          user_prompt:  userQuery,
+        }),
+        signal: currentAbortController?.signal,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'OCR failed'); }
+      const data = await r.json();
+
+      removeThinking(thinkId);
+      isFirstMessage = false;
+
+      appendOcrResult(data.raw_text, data.formatted_text, data.confidence, imgPreviewSrc, imgFileName);
+
+    } catch (e) {
+      removeThinking(thinkId);
+      if (e.name !== 'AbortError') {
+        showError(e.message || 'OCR failed. Check if EasyOCR is installed.');
+      }
+    } finally {
+      isLoading = false;
+      currentAbortController = null;
+      setLoadingState(false);
+      scrollToBottom();
+    }
+  }
+
+  function appendOcrResult(rawText, formattedText, confidence, imgSrc, filename) {
+    const container = document.getElementById('messages-container');
+    const group     = document.createElement('div');
+    group.className = 'msg-group';
+
+    const imgKey  = 'opl_' + Date.now();
+    window._mttrImages         = window._mttrImages || {};
+    window._mttrImages[imgKey] = { src: imgSrc, filename: filename, mime: 'image/jpeg' };
+
+    const confPct = confidence ? `${Math.round(confidence * 100)}%` : 'N/A';
+
+    group.innerHTML = `
+      <div class="msg-ai">
+        <div class="ai-avatar">M</div>
+        <div class="bubble">
+          <div class="intent-badge" style="color:var(--purple);border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.07);">
+            📖 OPL Hindi OCR
+          </div>
+          <div class="db-record-image-row" style="margin-top:10px;">
+            <div class="db-record-image-label"><span>📷</span> Source Image</div>
+            <div class="db-record-img-wrap" onclick="openLightboxByKey('${imgKey}')" title="Click to enlarge">
+              <img src="${imgSrc}" alt="${esc(filename)}" style="max-height:160px;"/>
+              <div class="db-record-img-overlay"><span class="db-record-img-zoom-icon">🔍</span></div>
+            </div>
+            <div class="db-record-img-filename">${esc(filename)} · OCR Confidence: ${confPct}</div>
+          </div>
+          <div class="ocr-result-card">
+            <div class="ocr-result-label"><span>📝</span> Extracted &amp; Formatted Text</div>
+            <div class="ocr-result-text">${esc(formattedText || rawText || 'No text could be extracted from this image.')}</div>
+            <button class="ocr-save-btn" onclick="copyOcrText(this, ${JSON.stringify(formattedText || rawText || '')})">
+              📋 Copy text
+            </button>
+          </div>
+          <div class="bubble-footer">
+            <button class="tts-btn" onclick="speakText(${JSON.stringify(formattedText || rawText || '')}, this)">
+              <span>🔊</span> Read aloud
+            </button>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(group);
+    scrollToBottom();
+  }
+
+  function copyOcrText(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerHTML = '✓ Copied!';
+      setTimeout(() => { btn.innerHTML = '📋 Copy text'; }, 2000);
+    });
+  }
+
+  // Copy the rendered AI response (preserves tables as TSV, text as plain markdown-ish)
+function copyResponse(btn, contentId) {
+  const el = document.getElementById(contentId);
+  if (!el) return;
+
+  let out = '';
+
+  // Walk child nodes so tables become tab-separated, everything else stays text
+  el.childNodes.forEach(node => {
+    out += extractCopyText(node);
+  });
+
+  out = out.replace(/\n{3,}/g, '\n\n').trim();
+
+  navigator.clipboard.writeText(out).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = '<span>✓</span> Copied';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<span>📋</span> Copy';
+    }, 2000);
+  }).catch(() => showError('Copy failed — clipboard not available.'));
+}
+
+// Recursively turn rendered HTML back into clean copyable text
+function extractCopyText(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent;
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  // Rendered markdown table → tab-separated rows (pastes cleanly into Excel/Sheets)
+  if (node.classList && node.classList.contains('md-table-wrap')) {
+    const table = node.querySelector('table');
+    if (!table) return '';
+    const rows = [...table.querySelectorAll('tr')].map(tr =>
+      [...tr.querySelectorAll('th,td')].map(c => c.innerText.trim()).join('\t')
+    );
+    return '\n' + rows.join('\n') + '\n';
+  }
+
+  // Numbered step → "N. text"
+  if (node.classList && node.classList.contains('ai-step')) {
+    const num = node.querySelector('.step-num')?.innerText.trim() || '';
+    const txt = node.querySelector('.step-text')?.innerText.trim() || '';
+    return `${num}. ${txt}\n`;
+  }
+
+  // Bullet → "- text"
+  if (node.classList && node.classList.contains('ai-bullet')) {
+    const txt = node.querySelector('div:last-child')?.innerText.trim() || '';
+    return `- ${txt}\n`;
+  }
+
+  // Structured troubleshoot sections (cause/why/safety) → label + text
+  if (node.classList && node.classList.contains('ai-section')) {
+    const label = node.querySelector('.ai-label')?.innerText.trim() || '';
+    let body = '';
+    node.childNodes.forEach(c => {
+      if (!c.classList || !c.classList.contains('ai-label')) body += extractCopyText(c);
+    });
+    return `\n${label}\n${body.trim()}\n`;
+  }
+
+  // <br> → newline
+  if (node.tagName === 'BR') return '\n';
+
+  // Block-ish elements get a trailing newline
+  const block = ['DIV','P','TR'].includes(node.tagName);
+  let inner = '';
+  node.childNodes.forEach(c => inner += extractCopyText(c));
+  return block ? inner + '\n' : inner;
+}
+
+  // ── Load more records (pagination) ────────────────────────────────────────
+  async function loadMoreRecords(btn) {
+    if (!currentQueryForMore || isLoading) return;
+    btn.disabled  = true;
+    btn.innerHTML = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text3);animation:bounce 1.2s infinite"></span> Loading…';
+
+    const nextOffset = currentOffset + PAGE_SIZE;
+    const payload    = { ...currentQueryForMore, offset: nextOffset };
+    const frozenTotal = totalRecordsFound;
+
+    try {
+      const r = await fetch('/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Error'); }
+      const data = await r.json();
+
+      currentOffset = nextOffset;
+
+      const newRecords = data.db_records_summary || [];
+      const hasMore    = data.has_more || false;
+
+      const oldWrap = btn.closest('.give-more-wrap');
+      if (oldWrap) oldWrap.remove();
+
+      appendMoreRecords(newRecords, hasMore, currentOffset, frozenTotal, data.intent);
+    } catch (e) {
+      btn.disabled  = false;
+      btn.innerHTML = '<span>⬇</span> Give more records';
+      showError(e.message);
+    }
+  }
+
+  function appendMoreRecords(newRecords, hasMore, offset, totalFound, intent) {
+    const grids = document.querySelectorAll('.db-records-grid');
+    const grid  = grids[grids.length - 1];
+    if (!grid) return;
+
+    newRecords.forEach((r, i) => {
+      const globalIdx      = offset + i;
+      const lossTimeBadge  = r.loss_time  ? `<span class="loss-time-badge">${esc(r.loss_time)}</span>`  : '';
+      const modelBadgeCard = r.model_name ? `<span class="db-record-model">${esc(r.model_name)}</span>` : '';
+
+      const workDoneBy = r.work_done_by
+        ? `<div class="db-record-row"><span class="db-record-label">Done By</span><span class="db-record-val" style="color:var(--teal);font-weight:500">${esc(r.work_done_by)}</span></div>`
+        : '';
+      const dateStr = r.date
+        ? `<div class="db-record-row"><span class="db-record-label">Date</span><span class="db-record-val" style="color:var(--text3);font-family:var(--mono);font-size:11.5px">${esc(r.date)}</span></div>`
+        : '';
+      const shiftStr = r.shift
+        ? `<div class="db-record-row"><span class="db-record-label">Shift</span><span class="db-record-val" style="color:var(--purple);font-size:11.5px">${esc(r.shift)}</span></div>`
+        : '';
+      const spareStr = r.spare_parts
+        ? `<div class="db-record-row"><span class="db-record-label">Spare</span><span class="db-record-val" style="color:#f97316;font-size:11.5px">${esc(r.spare_parts)}</span></div>`
+        : '';
+
+      let imageBlock = '';
+      if (r.image_b64 && r.image_b64.trim()) {
+        const imgSrc = `data:${r.image_mime || 'image/jpeg'};base64,${r.image_b64}`;
+        const imgKey = `img_more_${Date.now()}_${i}`;
+        window._mttrImages         = window._mttrImages || {};
+        window._mttrImages[imgKey] = { src: imgSrc, filename: r.image_name || 'reference_image', mime: r.image_mime || 'image/jpeg' };
+        imageBlock = `<div class="db-record-image-row">
+          <div class="db-record-image-label"><span>📷</span> Reference Photo</div>
+          <div class="db-record-img-wrap" onclick="openLightboxByKey('${imgKey}')" title="Click to enlarge">
+            <img src="${imgSrc}" alt="${esc(r.image_name || '')}" loading="lazy"/>
+            <div class="db-record-img-overlay"><span class="db-record-img-zoom-icon">🔍</span></div>
+          </div>
+          <div class="db-record-img-filename">${esc(r.image_name || '')}</div>
+        </div>`;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'db-record-card give-more-card';
+      card.innerHTML = `
+        <div class="db-record-header">
+          <span class="db-record-num">${globalIdx + 1}</span>
+          <span class="db-record-machine">${esc(r.machine)}</span>
+          ${modelBadgeCard}${lossTimeBadge}
+        </div>
+        <div class="db-record-row"><span class="db-record-label">Problem</span><span class="db-record-val">${esc(r.problem)}</span></div>
+        <div class="db-record-row"><span class="db-record-label">Solution</span><span class="db-record-val">${esc(r.solution)}</span></div>
+        ${workDoneBy}${dateStr}${shiftStr}${spareStr}${imageBlock}`;
+      grid.appendChild(card);
+    });
+
+    const section = grid.closest('.db-records-section');
+    if (!section) return;
+    const shown = offset + newRecords.length;
+    const wrap  = document.createElement('div');
+    if (hasMore) {
+      wrap.className = 'give-more-wrap';
+      wrap.innerHTML = `<div class="give-more-info">Showing <strong>${shown}</strong> of <strong>${totalFound}</strong> matching records</div><button class="give-more-btn" onclick="loadMoreRecords(this)">⬇ Give more records</button>`;
+    } else {
+      wrap.className = 'give-more-wrap give-more-done';
+      wrap.innerHTML = `<span>✓</span> All ${totalFound} matching record${totalFound > 1 ? 's' : ''} shown`;
+    }
+    section.parentNode.insertBefore(wrap, section.nextSibling);
+    scrollToBottom();
+  }
+
+  // ── Theme ─────────────────────────────────────────────────────────────────
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+    localStorage.setItem('mttr-theme', isDark ? 'light' : 'dark');
+  }
+  (function() {
+    const saved = localStorage.getItem('mttr-theme');
+    if (saved === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      const btn = document.getElementById('theme-toggle');
+      if (btn) btn.textContent = '☀️';
+    }
+  })();
+
+  // ── TTS ───────────────────────────────────────────────────────────────────
+  function stopTTS() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    document.querySelectorAll('.tts-btn').forEach(btn => {
+      btn.classList.remove('speaking');
+      btn.innerHTML = '<span>🔊</span> Read aloud';
+    });
+    currentUtterance = null;
+  }
+
+  function speakText(text, btn) {
+    if (!window.speechSynthesis) { alert('TTS not supported in this browser.'); return; }
+    if (btn.classList.contains('speaking')) { stopTTS(); return; }
+    stopTTS();
+    const tmp       = document.createElement('div');
+    tmp.innerHTML   = text;
+    const plainText = tmp.innerText || tmp.textContent || text;
+    const utterance = new SpeechSynthesisUtterance(plainText);
+    utterance.lang  = 'en-IN'; utterance.rate = 0.95; utterance.pitch = 1; utterance.volume = 1;
+    const voices    = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang.startsWith('en') && (v.name.toLowerCase().includes('india') || v.name.toLowerCase().includes('google'))) || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utterance.voice = preferred;
+    utterance.onstart = () => { btn.classList.add('speaking'); btn.innerHTML = '<span>⏹</span> Stop'; };
+    utterance.onend   = () => { btn.classList.remove('speaking'); btn.innerHTML = '<span>🔊</span> Read aloud'; currentUtterance = null; };
+    utterance.onerror = () => { btn.classList.remove('speaking'); btn.innerHTML = '<span>🔊</span> Read aloud'; currentUtterance = null; };
+    currentUtterance  = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+
+  // ── Lightbox ──────────────────────────────────────────────────────────────
+  function openLightbox(src, filename) {
+    document.getElementById('img-lightbox-img').src           = src;
+    document.getElementById('img-lightbox-img').alt           = filename || 'Reference image';
+    document.getElementById('img-lightbox-label').textContent = filename ? `📷 ${filename}` : '📷 Reference image';
+    document.getElementById('img-lightbox-download').href     = src;
+    document.getElementById('img-lightbox-download').download = filename || 'reference_image';
+    document.getElementById('img-lightbox').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    document.getElementById('img-lightbox').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function handleLightboxClick(e) {
+    if (e.target === document.getElementById('img-lightbox')) closeLightbox();
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  function openLightboxByKey(key) {
+    const img = (window._mttrImages || {})[key];
+    if (!img) return;
+    openLightbox(img.src, img.filename);
+  }
+
+  // ── Message rendering ─────────────────────────────────────────────────────
+  function appendUserMessage(text) {
+    const container = document.getElementById('messages-container');
+    const group     = document.createElement('div');
+    group.className = 'msg-group';
+    group.innerHTML = `<div class="msg-user"><div class="bubble">${esc(text)}</div></div>`;
+    container.appendChild(group);
+    scrollToBottom();
+  }
+
+  // ★ UPDATED: appendAIMessage now accepts parsedFilters and executionPath
+  function appendAIMessage(text, intent, dbCount, dbRecords, diagData, usedModel,
+                            hasMore, totalFound, currentOff,
+                            tsgRecords, suggestTsg, originalQuery,
+                            parsedFilters, executionPath, visualization) {
+    dbRecords  = dbRecords  || [];
+    tsgRecords = tsgRecords || [];
+
+    const container = document.getElementById('messages-container');
+    const group     = document.createElement('div');
+    group.className = 'msg-group';
+
+    const msgId      = 'msg-'        + Date.now();
+    const bannerId   = 'tsg-banner-' + Date.now();
+    const dbBannerId = 'db-banner-'  + Date.now();
+
+    const badgeLabels = {
+      general:      '🔍 General knowledge',
+      db_lookup:    '📋 From maintenance records',
+      troubleshoot: '🔧 Troubleshooting',
+      followup:     '💬 Follow-up',
+      diagram:      '📊 Visual diagram',
+      tsg_lookup:   '📖 Troubleshooting Guide',
+      analytics:    '📊 Analytics',
+    };
+    const badge = badgeLabels[intent]
+      ? `<div class="intent-badge ${intent}">${badgeLabels[intent]}</div>`
+      : '';
+
+    const modelBadge = usedModel
+      ? `<div class="model-filter-badge">⬡ ${esc(usedModel)}</div>`
+      : '';
+
+    // ★ NEW: Build filter badges row (shown right after the intent badge)
+    const filterBadgesHTML = buildFilterBadgesHTML(parsedFilters, executionPath, originalQuery);
+
+    // ★ NEW: For analytics execution path, use the analytics card renderer
+    const isAnalytics = executionPath === 'analytics' && !visualization;
+    const formatted = isAnalytics
+      ? formatAnalyticsResponse(text, executionPath)
+      : (intent === 'troubleshoot')
+        ? formatTroubleshoot(text)
+        : formatGeneral(text);
+    const chartBlock = visualization ? renderVisualization(visualization) : '';
+
+    // ── DB Records consent banner ─────────────────────────────────────────
+    let dbConsentBanner = '';
+    if (dbRecords.length > 0 && (intent === 'db_lookup' || intent === 'troubleshoot')) {
+      const lowestLabel = dbRecords[0]?.loss_time ? ', sorted by lowest downtime' : '';
+      const modelLabel  = usedModel ? ` for model ${usedModel}` : '';
+
+      // Build filter summary for banner
+      let filterSummary = '';
+      if (parsedFilters) {
+        const parts = [];
+        if (parsedFilters.worker || parsedFilters.work_done_by)
+          parts.push(`by ${parsedFilters.worker || parsedFilters.work_done_by}`);
+        if (parsedFilters.year) parts.push(`in ${parsedFilters.year}`);
+        if (parsedFilters.shift) parts.push(`${parsedFilters.shift} shift`);
+        if (parsedFilters.machine) parts.push(`on ${parsedFilters.machine}`);
+        if (parts.length) filterSummary = ' (' + parts.join(', ') + ')';
+      }
+
+      _pendingDbRecords[dbBannerId] = {
+        records:      dbRecords,
+        hasMore:      hasMore,
+        totalFound:   totalFound,
+        currentOff:   currentOff,
+        intent:       intent,
+        model:        usedModel,
+        queryForMore: currentQueryForMore,
+      };
+
+      dbConsentBanner = `
+        <div class="db-suggest-banner" id="${dbBannerId}">
+          <div class="db-suggest-left">
+            <div class="db-suggest-icon">🗄️</div>
+            <div class="db-suggest-text">
+              Found <strong>${totalFound} database record${totalFound !== 1 ? 's' : ''}</strong>${modelLabel}${filterSummary}${lowestLabel}.
+              Want to see them?
+            </div>
+          </div>
+          <div class="db-suggest-actions">
+            <button class="db-yes-btn" onclick="onDbYesClick('${dbBannerId}')">
+              ✓ Show records
+            </button>
+            <button class="db-no-btn" onclick="onDbNoClick('${dbBannerId}')">
+              No thanks
+            </button>
+          </div>
+        </div>
+        <div id="db-anchor-${dbBannerId}"></div>`;
+    }
+
+    // ── TSG record cards ──────────────────────────────────────────────────
+    let tsgCards = '';
+    if (tsgRecords.length > 0) {
+      const tsgCardItems = tsgRecords.map((r, i) => `
+        <div class="tsg-record-card">
+          <div class="tsg-record-header">
+            <span class="tsg-record-num">${i + 1}</span>
+            <span class="tsg-record-machine">${esc(r.machine || '')}</span>
+            ${r.line_no ? `<span class="tsg-line-badge">Line ${esc(r.line_no)}</span>` : ''}
+          </div>
+          <div class="tsg-record-row">
+            <span class="tsg-record-label">Issue</span>
+            <span class="tsg-record-val">${esc(r.issue || '')}</span>
+          </div>
+          <div class="tsg-record-row">
+            <span class="tsg-record-label">Cause</span>
+            <span class="tsg-record-val">${esc(r.cause || '')}</span>
+          </div>
+          <div class="tsg-record-row">
+            <span class="tsg-record-label">Action</span>
+            <span class="tsg-record-val tsg-record-corrective">${esc(r.corrective || '')}</span>
+          </div>
+        </div>`).join('');
+
+      tsgCards = `
+        <div class="tsg-records-section">
+          <div class="tsg-records-title">
+            <div class="tsg-records-title-dot"></div>
+            ${tsgRecords.length} troubleshooting guide entr${tsgRecords.length > 1 ? 'ies' : 'y'} matched
+          </div>
+          <div class="tsg-records-grid">${tsgCardItems}</div>
+        </div>`;
+    }
+
+    // ── TSG suggest banner ────────────────────────────────────────────────
+    let tsgBanner = '';
+    if (suggestTsg && originalQuery) {
+      const safeQuery = (originalQuery || '').replace(/'/g, "\\'");
+      tsgBanner = `
+        <div class="tsg-suggest-banner" id="${bannerId}">
+          <div class="tsg-suggest-left">
+            <div class="tsg-suggest-icon">📖</div>
+            <div class="tsg-suggest-text">
+              Want me to also check the <strong>Troubleshooting Guide</strong> for this issue?
+            </div>
+          </div>
+          <div class="tsg-suggest-actions">
+            <button class="tsg-yes-btn" onclick="onTsgYesClick('${safeQuery}', '', '${bannerId}')">
+              Yes, check TSG
+            </button>
+            <button class="tsg-no-btn" onclick="onTsgNoClick('${bannerId}')">
+              No thanks
+            </button>
+          </div>
+        </div>`;
+    }
+
+    // ── Diagram ───────────────────────────────────────────────────────────
+    let diagramBlock = '';
+    const diagId = 'diag-' + Date.now();
+    if (diagData && diagData.nodes && diagData.nodes.length >= 2) {
+      const svgMarkup  = buildDiagramSVG(diagData);
+      const legendHTML = buildLegendHTML(diagData.nodes);
+      diagramBlock = `
+        <div class="diagram-wrap">
+          <div class="diagram-header">
+            <div>
+              <div class="diagram-title-row">
+                <div class="diagram-icon">📊</div>
+                <div class="diagram-title-text">${esc(diagData.title || 'Process Diagram')}</div>
+              </div>
+              ${diagData.description ? `<div class="diagram-desc">${esc(diagData.description)}</div>` : ''}
+            </div>
+            <div class="diagram-actions">
+              <button class="diagram-btn" onclick="downloadSVG('${diagId}', '${esc(diagData.title || 'diagram').replace(/'/g,"\\'")}')">⬇ Save SVG</button>
+            </div>
+          </div>
+          <div class="diagram-body"><div id="${diagId}">${svgMarkup}</div></div>
+          ${legendHTML ? `<div class="diagram-legend">${legendHTML}</div>` : ''}
+        </div>`;
+    }
+
+    group.innerHTML = `
+      <div class="msg-ai">
+        <div class="ai-avatar">M</div>
+        <div class="bubble">
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0">
+            ${badge}${modelBadge}
+          </div>
+          ${filterBadgesHTML}
+          <div id="${msgId}-content">${formatted}</div>
+          ${chartBlock}
+          ${diagramBlock}
+          ${dbConsentBanner}
+          ${tsgCards}
+          ${tsgBanner}
+          <div class="bubble-footer">
+            <button class="tts-btn" onclick="speakText(document.getElementById('${msgId}-content').innerText, this)">
+              <span>🔊</span> Read aloud
+            </button>
+            <button class="copy-btn" onclick="copyResponse(this, '${msgId}-content')">
+              <span>📋</span> Copy
+            </button>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(group);
+    scrollToBottom();
+  }
+
+  // ── SVG Diagram Builder ───────────────────────────────────────────────────
+  function getDiagramColors() {
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    return {
+      start:      isDark ? '#10b981' : '#059669',
+      end:        isDark ? '#ef4444' : '#dc2626',
+      decision:   isDark ? '#f59e0b' : '#d97706',
+      process:    isDark ? '#3b82f6' : '#2563eb',
+      check:      isDark ? '#a78bfa' : '#7c3aed',
+      default_n:  isDark ? '#3b82f6' : '#2563eb',
+      bg:         isDark ? '#0e0e14' : '#f5f4ef',
+      gridline:   isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)',
+      text_node:  '#ffffff',
+      text_dark:  isDark ? '#c0c0d0' : '#3a3a30',
+      text_edge:  isDark ? '#707080' : '#8a8a80',
+      edge_line:  isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.22)',
+      arrow_fill: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)',
+      shadow:     isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.12)',
+    };
+  }
+
+  function nodeColor(type, colors) {
+    return { start: colors.start, end: colors.end, decision: colors.decision, process: colors.process, check: colors.check }[type] || colors.default_n;
+  }
+
+  function buildLegendHTML(nodes) {
+    const colors = getDiagramColors();
+    const seen = new Set();
+    const items = [];
+    nodes.forEach(n => {
+      const t = n.type || 'process';
+      if (!seen.has(t)) {
+        seen.add(t);
+        items.push(`<div class="legend-item"><div class="legend-dot" style="background:${nodeColor(t, colors)}"></div><div class="legend-name">${t.charAt(0).toUpperCase() + t.slice(1)}</div></div>`);
+      }
+    });
+    return items.length <= 1 ? '' : `<span class="legend-label">Legend:</span>${items.join('')}`;
+  }
+
+  function buildDiagramSVG(data) {
+    const nodes  = data.nodes  || [];
+    const edges  = data.edges  || [];
+    const colors = getDiagramColors();
+    const NODE_W = 152, NODE_H = 48, H_GAP = 72, V_GAP = 68, DIAMOND_EXTRA = 10;
+    const layers = layoutNodes(nodes, edges);
+    const maxPerLayer = Math.max(...layers.map(l => l.length), 1);
+    const svgW = Math.max(480, maxPerLayer * (NODE_W + H_GAP) + H_GAP);
+    const svgH = layers.length * (NODE_H + V_GAP) + V_GAP + 10;
+    const nodePos = {};
+    layers.forEach((layer, li) => {
+      const y = V_GAP + li * (NODE_H + V_GAP);
+      const totalW = layer.length * NODE_W + (layer.length - 1) * H_GAP;
+      const startX = (svgW - totalW) / 2;
+      layer.forEach((nid, idx) => {
+        const x = startX + idx * (NODE_W + H_GAP);
+        nodePos[nid] = { x, y, cx: x + NODE_W / 2, cy: y + NODE_H / 2 };
+      });
+    });
+    const nodeMap = {};
+    nodes.forEach(n => nodeMap[n.id] = n);
+    const gridSize = 24;
+    let gridLines = '';
+    for (let gx = 0; gx < svgW; gx += gridSize) gridLines += `<line x1="${gx}" y1="0" x2="${gx}" y2="${svgH}" stroke="${colors.gridline}" stroke-width="1"/>`;
+    for (let gy = 0; gy < svgH; gy += gridSize) gridLines += `<line x1="0" y1="${gy}" x2="${svgW}" y2="${gy}" stroke="${colors.gridline}" stroke-width="1"/>`;
+    let edgeSVG = '';
+    edges.forEach(e => {
+      const from = nodePos[e.from], to = nodePos[e.to];
+      if (!from || !to) return;
+      const x1 = from.cx, y1 = from.y + NODE_H + 2, x2 = to.cx, y2 = to.y - 2;
+      const midY = (y1 + y2) / 2;
+      const path  = Math.abs(x1 - x2) < 4 ? `M ${x1} ${y1} L ${x2} ${y2}` : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      const label = (e.label || '').trim();
+      edgeSVG += `<path d="${path}" fill="none" stroke="${colors.edge_line}" stroke-width="1.8" ${label ? 'stroke-dasharray="5,3"' : ''} marker-end="url(#arrowhead)"/>`;
+      if (label) {
+        const lx = (x1 + x2) / 2, ly = (y1 + y2) / 2;
+        edgeSVG += `<rect x="${lx - 18}" y="${ly - 9}" width="36" height="14" rx="4" fill="${colors.bg}" opacity="0.85"/><text x="${lx}" y="${ly + 1}" text-anchor="middle" font-size="9" fill="${colors.text_edge}" font-family="'Geist Mono', monospace" font-weight="500">${esc(label)}</text>`;
+      }
+    });
+    let nodesSVG = '';
+    nodes.forEach(n => {
+      const pos = nodePos[n.id];
+      if (!pos) return;
+      const { x, y, cx, cy } = pos;
+      const type = n.type || 'process', fill = nodeColor(type, colors);
+      const lines = wrapText(n.label || n.id, 18);
+      const lineH = 13, textY = cy - ((lines.length - 1) * lineH) / 2;
+      const fid = 'shadow-' + n.id;
+      if (type === 'decision') {
+        const hw = NODE_W / 2, hh = NODE_H / 2 + DIAMOND_EXTRA;
+        nodesSVG += `<filter id="${fid}"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${colors.shadow}"/></filter><polygon points="${cx},${y - DIAMOND_EXTRA} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}" fill="${fill}" opacity="0.9" filter="url(#${fid})"/><polygon points="${cx},${y - DIAMOND_EXTRA} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>`;
+      } else if (type === 'start' || type === 'end') {
+        const r = NODE_H / 2;
+        nodesSVG += `<filter id="${fid}"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="${fill}" flood-opacity="0.35"/></filter><rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="${r}" fill="${fill}" opacity="0.92" filter="url(#${fid})"/><rect x="${x + 1}" y="${y + 1}" width="${NODE_W - 2}" height="${NODE_H / 2 - 1}" rx="${r}" fill="rgba(255,255,255,0.12)"/>`;
+      } else {
+        const stroke = type === 'check' ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.12)';
+        nodesSVG += `<filter id="${fid}"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="${colors.shadow}"/></filter><rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="9" fill="${fill}" opacity="0.88" filter="url(#${fid})"/><rect x="${x + 1}" y="${y + 1}" width="${NODE_W - 2}" height="${NODE_H / 2 - 1}" rx="8" fill="rgba(255,255,255,0.1)"/><rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="9" fill="none" stroke="${stroke}" stroke-width="1"/>`;
+      }
+      lines.forEach((line, li) => {
+        nodesSVG += `<text x="${cx}" y="${textY + li * lineH + 4}" text-anchor="middle" font-size="${type === 'decision' ? 10.5 : 11}" fill="${colors.text_node}" font-family="'Geist', sans-serif" font-weight="${type === 'start' || type === 'end' ? 700 : (type === 'decision' ? 600 : 500)}">${esc(line)}</text>`;
+      });
+    });
+    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg" style="border-radius:8px;"><defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="${colors.arrow_fill}"/></marker></defs><rect width="${svgW}" height="${svgH}" fill="${colors.bg}" rx="8"/><g>${gridLines}</g>${edgeSVG}${nodesSVG}</svg>`;
+  }
+
+  // ── DATA CHART RENDERERS (theme-aware hand-rolled SVG) ─────────────────────
+  function getChartColors() {
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    return {
+      palette: ['#f59e0b','#3b82f6','#10b981','#a78bfa','#f472b6','#2dd4bf',
+                '#ef4444','#f97316','#84cc16','#06b6d4','#eab308','#ec4899'],
+      text:  isDark ? '#c0c0d0' : '#3a3a30',
+      text2: isDark ? '#80808f' : '#7a7a70',
+      grid:  isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+      axis:  isDark ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.28)',
+      bg:    isDark ? '#0e0e14' : '#f5f4ef',
+    };
+  }
+  const FONT_M = "'Geist Mono', monospace";
+  const FONT_S = "'Geist', sans-serif";
+  function niceCeil(v){ if(v<=5) return 5; const p=Math.pow(10,Math.floor(Math.log10(v))); const f=v/p; const nf=f<=1?1:f<=2?2:f<=5?5:10; return nf*p; }
+  function fmtNum(v){ return Number.isInteger(v)?v:Math.round(v*10)/10; }
+  function clip(s,n){ s=String(s); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+
+  function buildBarChart(viz){
+    const c=getChartColors(), data=viz.data, n=data.length;
+    const W=Math.max(440,n*78+90), H=340, pad={top:28,right:24,bottom:84,left:58};
+    const plotW=W-pad.left-pad.right, plotH=H-pad.top-pad.bottom;
+    const niceMax=niceCeil(Math.max(...data.map(d=>d.value),1));
+    const slot=plotW/n, barW=Math.min(54,slot*0.62);
+    let grid='';
+    for(let i=0;i<=5;i++){ const val=niceMax*i/5, y=pad.top+plotH-(val/niceMax)*plotH;
+      grid+=`<line x1="${pad.left}" y1="${y}" x2="${pad.left+plotW}" y2="${y}" stroke="${c.grid}" stroke-width="1"/>`+
+            `<text x="${pad.left-8}" y="${y+3}" text-anchor="end" font-size="10" fill="${c.text2}" font-family="${FONT_M}">${fmtNum(val)}</text>`; }
+    let bars='';
+    data.forEach((d,i)=>{ const x=pad.left+i*slot+(slot-barW)/2, h=(d.value/niceMax)*plotH, y=pad.top+plotH-h, col=c.palette[i%c.palette.length];
+      const pct=(d.percent!=null)?` · ${d.percent}%`:'';
+      bars+=`<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="4" fill="${col}" opacity="0.88"><title>${esc(d.label)}: ${d.value}${pct}</title></rect>`+
+            `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="11" font-weight="600" fill="${c.text}" font-family="${FONT_M}">${d.value}${pct}</text>`+
+            `<text x="${x+barW/2}" y="${pad.top+plotH+16}" text-anchor="end" font-size="10" fill="${c.text2}" font-family="${FONT_S}" transform="rotate(-35 ${x+barW/2} ${pad.top+plotH+16})">${esc(clip(d.label,15))}</text>`; });
+    const axes=`<line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top+plotH}" stroke="${c.axis}" stroke-width="1.2"/>`+
+               `<line x1="${pad.left}" y1="${pad.top+plotH}" x2="${pad.left+plotW}" y2="${pad.top+plotH}" stroke="${c.axis}" stroke-width="1.2"/>`;
+    const yT=`<text x="14" y="${pad.top+plotH/2}" text-anchor="middle" font-size="10" fill="${c.text2}" font-family="${FONT_M}" transform="rotate(-90 14 ${pad.top+plotH/2})">${esc(viz.yAxis||'')}</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="${c.bg}" rx="8"/>${grid}${axes}${bars}${yT}</svg>`;
+  }
+
+  function buildHBarChart(viz){
+    const c=getChartColors(), data=viz.data, n=data.length;
+    const rowH=34, W=500, pad={top:18,right:64,bottom:24,left:140}, H=pad.top+pad.bottom+n*rowH;
+    const plotW=W-pad.left-pad.right, niceMax=niceCeil(Math.max(...data.map(d=>d.value),1));
+    let bars='';
+    data.forEach((d,i)=>{ const y=pad.top+i*rowH+4, bh=rowH-12, w=(d.value/niceMax)*plotW, col=c.palette[i%c.palette.length];
+      const pct=(d.percent!=null)?` · ${d.percent}%`:'';
+      bars+=`<text x="${pad.left-8}" y="${y+bh/2+4}" text-anchor="end" font-size="11" fill="${c.text}" font-family="${FONT_S}">${esc(clip(d.label,20))}</text>`+
+            `<rect x="${pad.left}" y="${y}" width="${w}" height="${bh}" rx="4" fill="${col}" opacity="0.88"><title>${esc(d.label)}: ${d.value}</title></rect>`+
+            `<text x="${pad.left+w+6}" y="${y+bh/2+4}" font-size="10" font-weight="600" fill="${c.text}" font-family="${FONT_M}">${d.value}${pct}</text>`; });
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="${c.bg}" rx="8"/>${bars}</svg>`;
+  }
+
+  function buildPieChart(viz){
+    const c=getChartColors(), data=viz.data.filter(d=>d.value>0);
+    const total=data.reduce((s,d)=>s+d.value,0)||1, W=470,H=300,cx=148,cy=150,r=112;
+    let slices='';
+    if(data.length===1){
+      slices=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c.palette[0]}" opacity="0.9"/>`+
+             `<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="${FONT_M}">100%</text>`;
+    } else {
+      let ang=-Math.PI/2;
+      data.forEach((d,i)=>{ const frac=d.value/total, a2=ang+frac*2*Math.PI;
+        const x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang), x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+        const large=frac>0.5?1:0, col=c.palette[i%c.palette.length];
+        slices+=`<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${col}" opacity="0.9" stroke="${c.bg}" stroke-width="2"><title>${esc(d.label)}: ${d.value} (${Math.round(frac*100)}%)</title></path>`;
+        if(frac>0.05){ const mid=(ang+a2)/2, lr=r*0.62;
+          slices+=`<text x="${cx+lr*Math.cos(mid)}" y="${cy+lr*Math.sin(mid)+3}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="${FONT_M}">${Math.round(frac*100)}%</text>`; }
+        ang=a2; });
+    }
+    let lg='';
+    data.forEach((d,i)=>{ const col=c.palette[i%c.palette.length], ly=44+i*23, pct=(d.percent!=null)?d.percent:Math.round(d.value/total*100);
+      lg+=`<rect x="306" y="${ly-10}" width="11" height="11" rx="2" fill="${col}"/>`+
+          `<text x="324" y="${ly}" font-size="11" fill="${c.text}" font-family="${FONT_S}">${esc(clip(d.label,18))} (${pct}%)</text>`; });
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="${c.bg}" rx="8"/>${slices}${lg}</svg>`;
+  }
+
+  function buildLineChart(viz, area){
+    const c=getChartColors(), data=viz.data, n=data.length;
+    const W=Math.max(440,n*70+90), H=320, pad={top:24,right:26,bottom:66,left:58};
+    const plotW=W-pad.left-pad.right, plotH=H-pad.top-pad.bottom;
+    const niceMax=niceCeil(Math.max(...data.map(d=>d.value),1));
+    const xAt=i=> pad.left+(n===1?plotW/2:(i/(n-1))*plotW);
+    const yAt=v=> pad.top+plotH-(v/niceMax)*plotH;
+    let grid='';
+    for(let i=0;i<=5;i++){ const val=niceMax*i/5, y=pad.top+plotH-(val/niceMax)*plotH;
+      grid+=`<line x1="${pad.left}" y1="${y}" x2="${pad.left+plotW}" y2="${y}" stroke="${c.grid}" stroke-width="1"/>`+
+            `<text x="${pad.left-8}" y="${y+3}" text-anchor="end" font-size="10" fill="${c.text2}" font-family="${FONT_M}">${fmtNum(val)}</text>`; }
+    let path=''; data.forEach((d,i)=>{ path+=(i===0?'M':'L')+xAt(i)+' '+yAt(d.value)+' '; });
+    const col=c.palette[1];
+    const areaPath = area ? `<path d="${path}L${xAt(n-1)} ${pad.top+plotH} L${xAt(0)} ${pad.top+plotH} Z" fill="${col}" opacity="0.15"/>` : '';
+    let pts=''; data.forEach((d,i)=>{ pts+=`<circle cx="${xAt(i)}" cy="${yAt(d.value)}" r="4" fill="${col}"><title>${esc(d.label)}: ${d.value}</title></circle>`+
+            `<text x="${xAt(i)}" y="${yAt(d.value)-9}" text-anchor="middle" font-size="10" font-weight="600" fill="${c.text}" font-family="${FONT_M}">${d.value}</text>`; });
+    let xl=''; data.forEach((d,i)=>{ xl+=`<text x="${xAt(i)}" y="${pad.top+plotH+18}" text-anchor="end" font-size="10" fill="${c.text2}" font-family="${FONT_S}" transform="rotate(-30 ${xAt(i)} ${pad.top+plotH+18})">${esc(clip(d.label,10))}</text>`; });
+    const axes=`<line x1="${pad.left}" y1="${pad.top}" x2="${pad.left}" y2="${pad.top+plotH}" stroke="${c.axis}" stroke-width="1.2"/>`+
+               `<line x1="${pad.left}" y1="${pad.top+plotH}" x2="${pad.left+plotW}" y2="${pad.top+plotH}" stroke="${c.axis}" stroke-width="1.2"/>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="${c.bg}" rx="8"/>${grid}${areaPath}<path d="${path}" fill="none" stroke="${col}" stroke-width="2.2"/>${pts}${xl}${axes}</svg>`;
+  }
+
+  function renderVisualization(viz){
+    if(!viz || !viz.data || !viz.data.length) return '';
+    const t=viz.responseType; let svg;
+    if(t==='pie_chart')                       svg=buildPieChart(viz);
+    else if(t==='horizontal_bar_chart')       svg=buildHBarChart(viz);
+    else if(t==='line_chart')                 svg=buildLineChart(viz,false);
+    else if(t==='area_chart')                 svg=buildLineChart(viz,true);
+    else                                      svg=buildBarChart(viz);   // bar + any fallback
+    const cid='chart-'+Date.now()+'-'+Math.floor(Math.random()*1000);
+    const safeTitle=(viz.title||'chart').replace(/'/g,"\\'");
+    return `<div class="diagram-wrap">
+      <div class="diagram-header">
+        <div><div class="diagram-title-row"><div class="diagram-icon">📊</div>
+        <div class="diagram-title-text">${esc(viz.title||'Chart')}</div></div></div>
+        <div class="diagram-actions"><button class="diagram-btn" onclick="downloadSVG('${cid}','${safeTitle}')">⬇ Save SVG</button></div>
+      </div>
+      <div class="diagram-body"><div id="${cid}">${svg}</div></div>
+    </div>`;
+  }
+
+  function layoutNodes(nodes, edges) {
+    const nodeIds  = nodes.map(n => n.id);
+    const inDegree = {}, adjList = {};
+    nodeIds.forEach(id => { inDegree[id] = 0; adjList[id] = []; });
+    edges.forEach(e => {
+      if (nodeIds.includes(e.from) && nodeIds.includes(e.to)) {
+        adjList[e.from].push(e.to);
+        inDegree[e.to] = (inDegree[e.to] || 0) + 1;
+      }
+    });
+    const layers = [];
+    let queue = nodeIds.filter(id => inDegree[id] === 0);
+    if (!queue.length) queue = [nodeIds[0]];
+    const visited = new Set();
+    while (queue.length > 0) {
+      layers.push([...queue]);
+      queue.forEach(id => visited.add(id));
+      const next = [];
+      queue.forEach(id => (adjList[id] || []).forEach(child => {
+        if (!visited.has(child)) { inDegree[child]--; if (inDegree[child] === 0) next.push(child); }
+      }));
+      queue = next;
+    }
+    const unvisited = nodeIds.filter(id => !visited.has(id));
+    if (unvisited.length > 0) layers.push(unvisited);
+    return layers.filter(l => l.length > 0);
+  }
+
+  function wrapText(text, maxLen) {
+    if (!text) return [''];
+    if (text.length <= maxLen) return [text];
+    const words = text.split(' ');
+    const lines = []; let current = '';
+    words.forEach(w => {
+      if ((current + ' ' + w).trim().length > maxLen && current) { lines.push(current.trim()); current = w; }
+      else current = (current + ' ' + w).trim();
+    });
+    if (current) lines.push(current.trim());
+    return lines.slice(0, 3);
+  }
+
+  function downloadSVG(containerId, title) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const svgEl = el.querySelector('svg');
+    if (!svgEl) return;
+    const blob = new Blob([svgEl.outerHTML], { type: 'image/svg+xml' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = (title || 'diagram').replace(/\s+/g, '_') + '.svg';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  // ── Thinking ──────────────────────────────────────────────────────────────
+  function showThinking() {
+    const container = document.getElementById('messages-container');
+    const id = 'think-' + Date.now();
+    const el = document.createElement('div');
+    el.className = 'msg-group'; el.id = id;
+    el.innerHTML = `<div class="thinking"><div class="think-avatar">M</div><div class="think-dots"><div class="think-dot"></div><div class="think-dot"></div><div class="think-dot"></div></div></div>`;
+    container.appendChild(el);
+    scrollToBottom();
+    return id;
+  }
+
+  function removeThinking(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function scrollToBottom() {
+    const area = document.getElementById('convo-area');
+    area.scrollTop = area.scrollHeight;
+  }
+
+  // ── Formatters ────────────────────────────────────────────────────────────
+  function renderInline(escaped) {
+    return escaped
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  }
+
+  function formatTroubleshoot(text) {
+    const causeM  = text.match(/MOST LIKELY CAUSE:\s*([\s\S]+?)(?=\nRECOMMENDED FIX:|$)/i);
+    const fixM    = text.match(/RECOMMENDED FIX:\s*([\s\S]+?)(?=\nWHY THIS HAPPENS:|$)/i);
+    const whyM    = text.match(/WHY THIS HAPPENS:\s*([\s\S]+?)(?=\nSAFETY NOTE:|$)/i);
+    const safetyM = text.match(/SAFETY NOTE:\s*([\s\S]+?)(?=\n[A-Z]{3,}:|$)/i);
+    if (!causeM && !fixM) return formatGeneral(text);
+    let html = '';
+    if (causeM) html += `<div class="ai-section"><div class="ai-label">Most Likely Cause</div><div class="ai-cause">${renderInline(esc(causeM[1].trim()))}</div></div>`;
+    if (fixM) {
+      const lines = fixM[1].trim().split(/\n/);
+      let stepsHtml = '', n = 0;
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t || /^#{1,3}\s/.test(t)) continue;
+        const clean = t.replace(/^\d+[\.\)]\s*/, '').replace(/^[-•*]\s*/, '').trim();
+        if (!clean) continue;
+        n++;
+        stepsHtml += `<div class="ai-step"><div class="step-num">${n}</div><div class="step-text">${renderInline(esc(clean))}</div></div>`;
+      }
+      if (stepsHtml) html += `<div class="ai-section"><div class="ai-label">Recommended Fix</div><div class="ai-steps">${stepsHtml}</div></div>`;
+    }
+    if (whyM)    html += `<div class="ai-section"><div class="ai-label">Why This Happens</div><div class="ai-why">${renderInline(esc(whyM[1].trim()))}</div></div>`;
+    if (safetyM) html += `<div class="ai-section"><div class="ai-label">⚠ Safety Note</div><div class="ai-safety"><span class="safety-icon">🔒</span><span>${renderInline(esc(safetyM[1].trim()))}</span></div></div>`;
+    return html || formatGeneral(text);
+  }
+
+  function parseMarkdownTables(text) {
+  // Split text by lines and detect table blocks
+  const lines = text.split('\n');
+  const result = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Detect a table: line contains | and next line is a separator (|---|---|)
+    if (
+      line.includes('|') &&
+      i + 1 < lines.length &&
+      /^\s*\|?[\s\-:]+\|[\s\-:|]+/.test(lines[i + 1])
+    ) {
+      // Collect all table lines
+      const tableLines = [];
+      while (i < lines.length && lines[i].includes('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+
+      // Parse header (first line)
+      const parseRow = (row) =>
+        row.split('|')
+          .map(c => c.trim())
+          .filter((c, idx, arr) => idx > 0 && idx < arr.length - 1 || (arr.length <= 2));
+
+      const headers = parseRow(tableLines[0]);
+      // Skip separator line (index 1)
+      const dataRows = tableLines.slice(2).map(parseRow);
+
+      // Build HTML table
+      const headerCells = headers.map(h => `<th>${esc(h)}</th>`).join('');
+      const bodyRows = dataRows.map(row => {
+        const cells = headers.map((_, ci) =>
+          `<td>${renderInline(esc(row[ci] || ''))}</td>`
+        ).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      result.push(
+        `<div class="md-table-wrap">` +
+        `<table class="md-table">` +
+        `<thead><tr>${headerCells}</tr></thead>` +
+        `<tbody>${bodyRows}</tbody>` +
+        `</table></div>`
+      );
+    } else {
+      result.push(lines[i]);
+      i++;
+    }
+  }
+
+  return result.join('\n');
+}
+
+function formatGeneral(text) {
+  // First pass: extract and replace markdown tables with rendered HTML
+  // We need to work on raw text before escaping
+  const tableBlockRe = /(\|.+\|\n\|[\s\-:]+\|[\s\-:|]+\|\n(?:\|.+\|\n?)*)/g;
+  const tablePlaceholders = {};
+  let placeholderIdx = 0;
+
+  const textWithPlaceholders = text.replace(tableBlockRe, (match) => {
+    const lines = match.trim().split('\n');
+    const parseRow = (row) =>
+      row.split('|')
+        .map(c => c.trim())
+        .filter((c, idx, arr) => !(idx === 0 && c === '') && !(idx === arr.length - 1 && c === ''));
+
+    const headers = parseRow(lines[0]);
+    const dataRows = lines.slice(2).filter(l => l.includes('|')).map(parseRow);
+
+    const headerCells = headers.map(h => `<th>${esc(h)}</th>`).join('');
+    const bodyRows = dataRows.map((row, ri) => {
+      const cells = headers.map((_, ci) => {
+        const val = row[ci] || '';
+        return `<td>${renderInline(esc(val))}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    const html =
+      `<div class="md-table-wrap">` +
+      `<table class="md-table">` +
+      `<thead><tr>${headerCells}</tr></thead>` +
+      `<tbody>${bodyRows}</tbody>` +
+      `</table></div>`;
+
+    const key = `%%TABLE_${placeholderIdx++}%%`;
+    tablePlaceholders[key] = html;
+    return key;
+  });
+
+  // Now escape and format the non-table parts
+  let out = esc(textWithPlaceholders);
+
+  // Restore table placeholders (they must NOT be escaped)
+  Object.entries(tablePlaceholders).forEach(([key, html]) => {
+    out = out.replace(esc(key), html);
+  });
+
+  // Apply remaining markdown formatting
+  out = out.replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>');
+  out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  out = out.replace(
+    /^(\d+[\.\)])\s+(.+)$/gm,
+    (_, num, content) =>
+      `<div class="ai-step"><div class="step-num">${num.replace(/[\.\)]/, '')}</div><div class="step-text">${content}</div></div>`
+  );
+  out = out.replace(
+    /^[-•*]\s+(.+)$/gm,
+    '<div class="ai-bullet"><div class="bullet-dot">·</div><div>$1</div></div>'
+  );
+  // Replace separator lines like ===... or ---...
+  out = out.replace(/^[=\-]{4,}$/gm, '');
+  out = out.replace(/\n/g, '<br>');
+
+  return `<div class="ai-raw" style="white-space:normal">${out}</div>`;
+}
+
+  function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showError(msg) {
+    document.getElementById('error-area').innerHTML = `<div class="error-toast">⚠ ${esc(msg)}</div>`;
+  }
+
+  // ── Mic ───────────────────────────────────────────────────────────────────
+  function toggleMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Voice input not supported. Use Chrome.'); return; }
+    const micBtn = document.getElementById('mic-btn');
+    if (isRecording && recognition) { recognition.stop(); return; }
+    recognition = new SR();
+    recognition.lang = 'en-IN'; recognition.interimResults = false; recognition.maxAlternatives = 1;
+    recognition.onstart  = () => { isRecording = true; micBtn.classList.add('recording'); micBtn.textContent = '⏹'; };
+    recognition.onresult = (e) => {
+      const t   = e.results[0][0].transcript;
+      const inp = document.getElementById('query-input');
+      inp.value = (inp.value ? inp.value + ' ' : '') + t;
+      autoResize(inp);
+    };
+    recognition.onerror = (e) => console.error('Speech error:', e.error);
+    recognition.onend   = () => { isRecording = false; micBtn.classList.remove('recording'); micBtn.textContent = '🎤'; };
+    recognition.start();
+  }
+
+  // ── Text-selection "Ask MTTR" popup ────────────────────────────────────────
+let _selectedQuoteText = '';
+
+document.addEventListener('mouseup', handleTextSelection);
+document.addEventListener('selectionchange', () => {
+  // Hide if selection got cleared
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) hideSelectionButton();
+});
+
+function handleTextSelection(e) {
+  const btn = document.getElementById('selection-ask-btn');
+  // Don't trigger when clicking the button itself
+  if (e.target.closest && e.target.closest('.selection-ask-btn')) return;
+
+  const sel = window.getSelection();
+  const text = sel ? sel.toString().trim() : '';
+
+  // Only react to selections inside an AI bubble, and ignore trivial/huge ones
+  const anchorEl = sel.anchorNode
+    ? (sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode)
+    : null;
+  const insideAiBubble = anchorEl && anchorEl.closest && anchorEl.closest('.msg-ai .bubble');
+
+  if (!text || text.length < 2 || text.length > 300 || !insideAiBubble) {
+    hideSelectionButton();
+    return;
+  }
+
+  _selectedQuoteText = text;
+
+  // Position the button just above the selection
+  const range = sel.getRangeAt(0);
+  const rect  = range.getBoundingClientRect();
+  btn.style.top  = (window.scrollY + rect.top - 42) + 'px';
+  btn.style.left = (window.scrollX + rect.left + rect.width / 2 - 50) + 'px';
+  btn.classList.add('visible');
+}
+
+function hideSelectionButton() {
+  const btn = document.getElementById('selection-ask-btn');
+  if (btn) btn.classList.remove('visible');
+}
+
+function askFromSelection() {
+  if (!_selectedQuoteText) return;
+  const input = document.getElementById('query-input');
+
+  // Embed the selected text as a quoted context inside the prompt
+  input.value = `Regarding "${_selectedQuoteText}": `;
+  autoResize(input);
+  input.focus();
+  // Put the cursor at the end so the user types their question right after
+  input.setSelectionRange(input.value.length, input.value.length);
+
+  hideSelectionButton();
+  window.getSelection().removeAllRanges();
+}
+
+  // ── Keyboard ──────────────────────────────────────────────────────────────
+  document.getElementById('query-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); submitQuery(); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submitQuery();
+  });
+</script></body>
+</html>
+
+
